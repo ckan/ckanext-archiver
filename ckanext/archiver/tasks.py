@@ -332,7 +332,9 @@ def link_checker(context, data):
     else:
         # Send a head request
         try:
-            res = requests.head(url, timeout=url_timeout)
+            http = requests.head
+            if os.environ.get("LINK_CHECKER_METHOD", "").upper() == "GET": http = requests.get
+            res = http(url, timeout=url_timeout)
             headers = res.headers
         except httplib.InvalidURL, ve:
             log.error("Could not make a head request to %r, error is: %s. Package is: %r. This sometimes happens when using an old version of requests on a URL which issues a 301 redirect. Version=%s", url, ve, data.get('package'), requests.__version__)
