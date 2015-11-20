@@ -4,7 +4,6 @@ import os
 from ckan import model
 from ckan.model.types import make_uuid
 from ckan import plugins as p
-from ckan.lib.celery_app import celery
 from ckanext.report.interfaces import IReport
 from ckanext.archiver.interfaces import IPipe
 import ckan.plugins.toolkit as toolkit
@@ -47,6 +46,7 @@ class ArchiverPlugin(p.SingletonPlugin):
 
 def create_archiver_resource_task(resource, queue):
     from pylons import config
+    from ckan.lib.celery_app import celery
     package = resource.resource_group.package
     task_id = '%s/%s/%s' % (package.name, resource.id[:4], make_uuid()[:4])
     ckan_ini_filepath = os.path.abspath(config['__file__'])
@@ -55,6 +55,7 @@ def create_archiver_resource_task(resource, queue):
     log.debug('Archival of resource put into celery queue %s: %s/%s url=%r', queue, package.name, resource.id, resource.url)
 
 def create_archiver_package_task(package, queue):
+    from ckan.lib.celery_app import celery
     from pylons import config
     task_id = '%s/%s' % (package.name, make_uuid()[:4])
     ckan_ini_filepath = os.path.abspath(config['__file__'])
