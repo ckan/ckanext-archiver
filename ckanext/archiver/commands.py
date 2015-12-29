@@ -9,6 +9,7 @@ import itertools
 from pylons import config
 
 from ckan.lib.cli import CkanCommand
+from ckan.lib.helpers import OrderedDict
 
 REQUESTS_HEADER = {'content-type': 'application/json'}
 
@@ -372,13 +373,13 @@ class Archiver(CkanCommand):
         """
         from ckan import model
 
-        MIGRATIONS_ADD = {
-            "etag": "ALTER TABLE archival ADD COLUMN etag character varying",
-            "last_modified": "ALTER TABLE archival ADD COLUMN last_modified character varying"
-        }
+        MIGRATIONS_ADD = OrderedDict({
+                    "etag": "ALTER TABLE archival ADD COLUMN etag character varying",
+                    "last_modified": "ALTER TABLE archival ADD COLUMN last_modified character varying"
+                })
 
-        MIGRATIONS_MODIFY = {
-        }
+        MIGRATIONS_MODIFY = OrderedDict({
+                })
 
         q = "select column_name from INFORMATION_SCHEMA.COLUMNS where table_name = 'archival';"
         current_cols = list([m[0] for m in model.Session.execute(q)])
