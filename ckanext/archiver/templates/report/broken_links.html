@@ -24,9 +24,7 @@
         {% endfor %}
        </tbody>
       </table>
-    {% endif %}
-
-    {% if c.options['organization'] != None %}
+    {% else %}
         <ul>
           <li>Broken datasets: {{c.data['num_broken_packages']}} / {{c.data['num_packages']}} ({{c.data.get('broken_package_percent')}}%)</li>
           <li>Broken links: {{c.data['num_broken_resources']}} / {{c.data['num_resources']}} ({{c.data.get('broken_resource_percent')}}%)</li>
