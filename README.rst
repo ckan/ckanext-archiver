@@ -142,6 +142,17 @@ The Archiver can be used in two ways:
         paster archiver --help
 
 
+Migrations
+----------
+
+Over time it is possible that the database structure will change.  In these cases you can use the migrate command to update the database schema.  
+
+    ::
+        paster --plugin=ckanext-archiver archiver migrate -c <path to CKAN ini file>
+
+This is only necessary if you update ckanext-archiver and already have the database tables in place.
+
+
 Testing
 -------
 
