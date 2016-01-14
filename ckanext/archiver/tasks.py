@@ -314,8 +314,8 @@ def download(context, resource, url_timeout=30,
                                       stream=True)
     url_redirected_to = res.url if url != res.url else None
 
-    if 'previous' in context:
-        if 'etag' in res.headers and context['previous'].etag == res.headers['etag']:
+    if context.get('previous') and ('etag' in res.headers):
+        if context.get('previous').etag == res.headers['etag']:
             log.info("ETAG matches, not downloading content")
             raise NotChanged("etag suggests content has not changed")
 
