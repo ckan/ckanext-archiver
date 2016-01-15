@@ -1,8 +1,9 @@
 import copy
 
 import ckan.model as model
-from ckan.lib.helpers import OrderedDict
 import ckan.plugins as p
+
+from ckan.lib.helpers import OrderedDict
 from ckanext.report import lib
 
 def broken_links(organization, include_sub_organizations=False):
@@ -38,7 +39,7 @@ def broken_links_index(include_sub_organizations=False):
         num_resources = model.Session.query(model.Package)\
             .filter_by(owner_org=org.id)\
             .filter_by(state='active')
-        if hasattr(model, 'ResourceGroup'):
+        if p.toolkit.check_ckan_version(max_version='2.2.99'):
             num_resources = num_resources.join(model.ResourceGroup)
         num_resources = num_resources \
             .join(model.Resource)\
@@ -199,7 +200,7 @@ def broken_links_for_organization(organization, include_sub_organizations=False)
                         .count()
     num_resources = model.Session.query(model.Resource)\
                          .filter_by(state='active')
-    if hasattr(model, 'ResourceGroup'):
+    if p.toolkit.check_ckan_version(max_version='2.2.99'):
         num_resources = num_resources.join(model.ResourceGroup)
     num_resources = num_resources \
         .join(model.Package)\

@@ -6,6 +6,8 @@ from sqlalchemy import types
 from sqlalchemy.ext.declarative import declarative_base
 
 import ckan.model as model
+import ckan.plugins as p
+
 from ckan.lib import dictization
 
 log = __import__('logging').getLogger(__name__)
@@ -145,7 +147,7 @@ class Archival(Base):
 
         # Find the package_id for the resource.
         dataset = model.Session.query(model.Package)
-        if hasattr(model, 'ResourceGroup'):
+        if p.toolkit.check_ckan_version(max_version='2.2.99'):
             # earlier CKANs had ResourceGroup
             dataset = dataset.join(model.ResourceGroup)
         dataset = dataset \

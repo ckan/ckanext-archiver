@@ -5,6 +5,7 @@ import time
 import re
 import shutil
 import itertools
+import ckan.plugins as p
 
 from pylons import config
 
@@ -178,7 +179,7 @@ class Archiver(CkanCommand):
 
         self.log.info('Queue: %s', self.options.queue)
         for package in packages:
-            if hasattr(model, 'ResourceGroup'):
+            if p.toolkit.check_ckan_version(max_version='2.2.99'):
                 # earlier CKANs had ResourceGroup
                 pkg_resources = \
                     [res for res in
@@ -197,7 +198,10 @@ class Archiver(CkanCommand):
             time.sleep(0.1)  # to try to avoid Redis getting overloaded
 
         for resource in resources:
-            package = resource.resource_group.package
+            if p.toolkit.check_ckan_version(max_version='2.2.99'):
+                package = resource.resource_group.package
+            else:
+                package = resource.package
             self.log.info('Queuing resource %s/%s', package.name, resource.id)
             lib.create_archiver_resource_task(resource, self.options.queue)
             time.sleep(0.05)  # to try to avoid Redis getting overloaded
@@ -386,10 +390,16 @@ class Archiver(CkanCommand):
             # check the package isn't deleted
             # Need to refresh the resource's session
             resource = model.Session.query(model.Resource).get(resource.id)
-            if resource.resource_group and resource.resource_group.package:
-                if resource.resource_group.package.state == model.State.DELETED:
-                    print 'Package is deleted'
-                    continue
+            if p.toolkit.check_ckan_version(max_version='2.2.99'):
+                package = None
+                if resource.resource_group:
+                    package = resource.resource_group.package
+            else:
+                package = resource.package
+
+            if package and package.state == model.State.DELETED:
+                print 'Package is deleted'
+                continue       
 
             if url_base != site_url_base:
                 print 'ERROR Base URL is incorrect: %r != %r' % (url_base, site_url_base)

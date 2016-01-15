@@ -1,5 +1,6 @@
 import os
 import logging
+import ckan.plugins as p
 
 from ckan import model
 from ckan.model.types import make_uuid
@@ -10,7 +11,7 @@ log = logging.getLogger(__name__)
 
 def create_archiver_resource_task(resource, queue):
     from pylons import config
-    if hasattr(model, 'ResourceGroup'):
+    if p.toolkit.check_ckan_version(max_version='2.2.99'):
         # earlier CKANs had ResourceGroup
         package = resource.resource_group.package
     else:
