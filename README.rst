@@ -334,6 +334,20 @@ To run the tests:
     (pyenv)~/pyenv/src/ckan$ nosetests --ckan ../ckanext-archiver/tests/ --with-pylons=../ckanext-archiver/test-core.ini
 
 
+Building Debian package
+-----------------------
+
+NB this attempt at creating a Debian package is experimental. Important package dependencies have yet to specified. The outstanding issue is that some dependencies do not exist as debian packages (eg: messytables).
+
+To build the debian package::
+
+    cd ckanext-archiver; dpkg-buildpackage -us -uc -i -I -rfakeroot
+
+To list the package contents::
+
+    dpkg --contents ../python-ckanext-archiver_0.1-1_all.deb
+
+
 Questions
 ---------
 
