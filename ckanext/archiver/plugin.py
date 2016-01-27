@@ -53,16 +53,18 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
     # IActions
 
     def get_actions(self):
-        return dict((name, function) for name, function
-                    in action.__dict__.items()
-                    if callable(function))
+        return {
+            'archiver_resource_show': action.archiver_resource_show,
+            'archiver_dataset_show': action.archiver_dataset_show,
+            }
 
     # IAuthFunctions
 
     def get_auth_functions(self):
-        return dict((name, function) for name, function
-                    in auth.__dict__.items()
-                    if callable(function))
+        return {
+            'archiver_resource_show': auth.archiver_resource_show,
+            'archiver_dataset_show': auth.archiver_dataset_show,
+            }
 
     # ITemplateHelpers
 

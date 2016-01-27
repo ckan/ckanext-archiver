@@ -132,6 +132,16 @@ NB Previously you needed both ckanext-archiver and ckanext-qa to see the broken 
 
      python ckanext/archiver/bin/migrate_task_status.py --write production.ini
 
+Migrations post 2.0
+-------------------
+
+Over time it is possible that the database structure will change.  In these cases you can use the migrate command to update the database schema.  
+
+    ::
+        paster --plugin=ckanext-archiver archiver migrate -c <path to CKAN ini file>
+
+This is only necessary if you update ckanext-archiver and already have the database tables in place.
+
 
 Installing a Celery queue backend
 ---------------------------------
@@ -322,6 +332,20 @@ To run the tests:
 3. From the CKAN root directory (not the extension root) do::
 
     (pyenv)~/pyenv/src/ckan$ nosetests --ckan ../ckanext-archiver/tests/ --with-pylons=../ckanext-archiver/test-core.ini
+
+
+Building Debian package
+-----------------------
+
+NB this attempt at creating a Debian package is experimental. Important package dependencies have yet to specified. The outstanding issue is that some dependencies do not exist as debian packages (eg: messytables).
+
+To build the debian package::
+
+    cd ckanext-archiver; dpkg-buildpackage -us -uc -i -I -rfakeroot
+
+To list the package contents::
+
+    dpkg --contents ../python-ckanext-archiver_0.1-1_all.deb
 
 
 Questions

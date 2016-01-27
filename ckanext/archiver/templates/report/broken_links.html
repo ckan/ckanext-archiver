@@ -10,10 +10,10 @@
     <col style="width: 10%" />
     <col style="width: 10%" />
     <tr>
-      <th>Organization</th>
-      <th>Datasets with broken links</th>
-      <th>Broken links</th>
-      <th>% Broken links</th>
+      <th class="header">Organization</th>
+      <th class="header">Datasets with broken links</th>
+      <th class="header">Broken links</th>
+      <th class="header">% Broken links</th>
     </tr>
    </thead>
    <tbody>
@@ -27,9 +27,9 @@
     {% endfor %}
    </tbody>
   </table>
-{% endif %}
 
-{% if c.options['organization'] != None %}
+{% else %}
+
   <ul>
     <li>Broken datasets: {{ c.data['num_broken_packages'] }} / {{ c.data['num_packages'] }} ({{ c.data.get('broken_package_percent') }}%)</li>
     <li>Broken links: {{ c.data['num_broken_resources'] }} / {{ c.data['num_resources'] }} ({{ c.data.get('broken_resource_percent') }}%)</li>
