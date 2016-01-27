@@ -10,6 +10,7 @@ import ckan.plugins as p
 from pylons import config
 
 from ckan.lib.cli import CkanCommand
+from ckan.lib.helpers import OrderedDict
 
 REQUESTS_HEADER = {'content-type': 'application/json'}
 
@@ -61,6 +62,10 @@ class Archiver(CkanCommand):
              {2-chars-of-resource-id}/{resource-id}/filename.csv
              Running this moves them to the new locations and updates the
              cache_url on each resource to reflect the new location.
+
+        paster archiver migrate
+            - Updates the database schema to include new fields.
+
     '''
     # TODO
     #    paster archiver clean-files
@@ -120,6 +125,8 @@ class Archiver(CkanCommand):
             self.log.info('Archiver tables are initialized')
         elif cmd == 'migrate-archive-dirs':
             self.migrate_archive_dirs()
+        elif cmd == 'migrate':
+            self.migrate()
         else:
             self.log.error('Command %s not recognized' % (cmd,))
 
@@ -363,6 +370,46 @@ class Archiver(CkanCommand):
         print "Deleted resource info:"
         print "  No cache_filepath: {0}".format(not_cached_deleted)
         print "  cache_filepath not on disk: {0}".format(file_not_found_deleted)
+
+    def migrate(self):
+        """ Adds any missing columns to the database table for Archival by
+        checking the schema and adding those that are missing.
+
+        If you wish to add a column, add the column name and sql
+        statement to MIGRATIONS_ADD which will check that the column is
+        not present before running the query.
+
+        If you wish to modify or delete a column, add the column name and
+        query to the MIGRATIONS_MODIFY which only runs if the column
+        does exist.
+        """
+        from ckan import model
+
+        MIGRATIONS_ADD = OrderedDict({
+                    "etag": "ALTER TABLE archival ADD COLUMN etag character varying",
+                    "last_modified": "ALTER TABLE archival ADD COLUMN last_modified character varying"
+                })
+
+        MIGRATIONS_MODIFY = OrderedDict({
+                })
+
+        q = "select column_name from INFORMATION_SCHEMA.COLUMNS where table_name = 'archival';"
+        current_cols = list([m[0] for m in model.Session.execute(q)])
+        for k, v in MIGRATIONS_ADD.iteritems():
+            if not k in current_cols:
+                self.log.info(u"Adding column '{0}'".format(k))
+                self.log.info(u"Executing '{0}'".format(v))
+                model.Session.execute(v)
+                model.Session.commit()
+
+        for k, v in MIGRATIONS_MODIFY.iteritems():
+            if  k in current_cols:
+                self.log.info(u"Removing column '{0}'".format(k))
+                self.log.info(u"Executing '{0}'".format(v))
+                model.Session.execute(v)
+                model.Session.commit()
+
+        self.log.info("Migrations complete")
 
     def migrate_archive_dirs(self):
         from ckan import model

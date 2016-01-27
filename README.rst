@@ -132,6 +132,16 @@ NB Previously you needed both ckanext-archiver and ckanext-qa to see the broken 
 
      python ckanext/archiver/bin/migrate_task_status.py --write production.ini
 
+Migrations post 2.0
+-------------------
+
+Over time it is possible that the database structure will change.  In these cases you can use the migrate command to update the database schema.  
+
+    ::
+        paster --plugin=ckanext-archiver archiver migrate -c <path to CKAN ini file>
+
+This is only necessary if you update ckanext-archiver and already have the database tables in place.
+
 
 Installing a Celery queue backend
 ---------------------------------

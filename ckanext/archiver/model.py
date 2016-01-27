@@ -31,6 +31,7 @@ class Status:
         not_broken = {
             # is_broken = False
             0: 'Archived successfully',
+            1: 'Content has not changed',
         }
         broken = {
             # is_broken = True
@@ -74,7 +75,7 @@ class Status:
 
     @classmethod
     def is_ok(cls, status_id):
-        return status_id == 0
+        return status_id in [0, 1]
 
 broken_enum = {True: 'Broken',
                None: 'Not sure if broken',
@@ -105,6 +106,8 @@ class Archival(Base):
     size = Column(types.BigInteger, default=0)
     mimetype = Column(types.UnicodeText)
     hash = Column(types.UnicodeText)
+    etag = Column(types.UnicodeText)
+    last_modified = Column(types.UnicodeText)
 
     # History
     first_failure = Column(types.DateTime)
