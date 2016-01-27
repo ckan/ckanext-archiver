@@ -15,11 +15,14 @@ import time
 from requests.packages import urllib3
 
 from ckan.lib.celery_app import celery
+from ckan import plugins as p
 try:
     from ckanext.archiver import settings
 except ImportError:
     from ckanext.archiver import default_settings as settings
 from ckanext.archiver import interfaces as archiver_interfaces
+
+toolkit = p.toolkit
 
 ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
@@ -109,7 +112,8 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     Archive a package.
     '''
     from ckan import model
-    from ckan.logic import get_action
+
+    get_action = toolkit.get_action
 
     load_config(ckan_ini_filepath)
     register_translator()
@@ -135,7 +139,7 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
             raise
         # Any problem at all is logged and reraised so that celery can log it too
         log.error('Error occurred during archiving package: %s\nPackage: %r %r',
-                  e, package_id, package['name'] if package in dir() else '')
+                  e, package_id, package['name'] if 'package' in dir() else '')
         raise
 
     if num_archived > 0:
@@ -143,6 +147,28 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
         notify_package(package, queue, ckan_ini_filepath)
     else:
         log.info("Not notifying package as 0 items were archived")
+
+    # Refresh the index for this dataset, so that it contains the latest
+    # archive info. However skip it if there are downstream plugins that will
+    # do this anyway, since it is an expensive step to duplicate.
+    if 'qa' not in get_plugins_waiting_on_ipipe():
+        _update_search_index(package_id, log)
+    else:
+        log.info('Search index skipped %s', package['name'])
+
+
+def _update_search_index(package_id, log):
+    '''
+    Tells CKAN to update its search index for a given package.
+    '''
+    from ckan import model
+    from ckan.lib.search.index import PackageSearchIndex
+    package_index = PackageSearchIndex()
+    context_ = {'model': model, 'ignore_auth': True, 'session': model.Session,
+                'use_cache': False, 'validate': False}
+    package = toolkit.get_action('package_show')(context_, {'id': package_id})
+    package_index.index_package(package, defer_commit=False)
+    log.info('Search indexed %s', package['name'])
 
 
 def _update_resource(ckan_ini_filepath, resource_id, queue):
@@ -173,8 +199,10 @@ def _update_resource(ckan_ini_filepath, resource_id, queue):
     register_translator()
 
     from ckan import model
-    from ckan.logic import get_action
     from pylons import config
+    from ckan.plugins import toolkit
+
+    get_action = toolkit.get_action
 
     assert is_id(resource_id), resource_id
     context_ = {'model': model, 'ignore_auth': True, 'session': model.Session}
@@ -206,7 +234,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue):
     download_status_id = Status.by_text('Archived successfully')
     context = {
         'site_url': config.get('ckan.site_url_internally') or config['ckan.site_url'],
-        'cache_url_root': config.get('ckan.cache_url_root'),
+        'cache_url_root': config.get('ckanext-archiver.cache_url_root'),
         'previous': Archival.get_for_resource(resource_id)
         }
     try:
@@ -251,26 +279,25 @@ def _update_resource(ckan_ini_filepath, resource_id, queue):
             _save(download_status_id, e, resource, *extra_args)
             return
 
-    # Archival. We don't need this if the remote content has not changed
-    if requires_archive:
-        log.info('Attempting to archive resource')
-        try:
-            archive_result = archive_resource(context, resource, log, download_result)
-        except ArchiveError, e:
-            log.error('System error during archival: %r, %r', e, e.args)
-            _save(Status.by_text('System error during archival'), e, resource, download_result['url_redirected_to'])
-            return
+    if not requires_archive:
+        # We don't need to archive if the remote content has not changed
+        return None
 
-        # Success
-        _save(Status.by_text('Archived successfully'), '', resource,
-              download_result['url_redirected_to'], download_result, archive_result)
+    # Archival
+    log.info('Attempting to archive resource')
+    try:
+        archive_result = archive_resource(context, resource, log, download_result)
+    except ArchiveError, e:
+        log.error('System error during archival: %r, %r', e, e.args)
+        _save(Status.by_text('System error during archival'), e, resource, download_result['url_redirected_to'])
+        return
 
-        # The return value is only used by tests. Serialized for Celery.
-        print download_result
-        print archive_result
-        return json.dumps(dict(download_result, **archive_result))
+    # Success
+    _save(Status.by_text('Archived successfully'), '', resource,
+            download_result['url_redirected_to'], download_result, archive_result)
 
-    return None
+    # The return value is only used by tests. Serialized for Celery.
+    return json.dumps(dict(download_result, **archive_result))
 
 
 def download(context, resource, url_timeout=30,
@@ -307,11 +334,13 @@ def download(context, resource, url_timeout=30,
             not url.startswith('http')):
         url = context['site_url'].rstrip('/') + url
 
+    headers = _set_user_agent_string({})
+
     # start the download - just get the headers
     # May raise DownloadException
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
-    res = convert_requests_exceptions(log, method_func, url, timeout=url_timeout,
-                                      stream=True)
+    res = requests_wrapper(log, method_func, url, timeout=url_timeout,
+                           stream=True, headers=headers)
     url_redirected_to = res.url if url != res.url else None
 
     if 'previous' in context:
@@ -359,7 +388,7 @@ def download(context, resource, url_timeout=30,
     def get_content():
         return res.content
     log.info('Downloading the body')
-    content = convert_requests_exceptions(log, get_content)
+    content = requests_wrapper(log, get_content)
 
     # APIs can return status 200, but contain an error message in the body
     if response_is_an_api_error(content):
@@ -438,9 +467,9 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
 
     # calculate the cache_url
     if not context.get('cache_url_root'):
-        log.warning('Not saved cache_url because no value for cache_url_root '
-                    'in config')
-        raise ArchiveError('No value for cache_url_root in config')
+        log.warning('Not saved cache_url because no value for '
+                    'ckanext-archiver.cache_url_root in config')
+        raise ArchiveError('No value for ckanext-archiver.cache_url_root in config')
     cache_url = urlparse.urljoin(context['cache_url_root'],
                                  '%s/%s' % (relative_archive_path, file_name))
     return {'cache_filepath': saved_file,
@@ -449,23 +478,30 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
 
 def notify_resource(resource, queue, cache_filepath):
     '''
-    Broadcasts a notification that an resource archival has taken place (or at least
-    the archival object is changed somehow). e.g. ckanext-qa listens for this
+    Broadcasts an IPipe notification that an resource archival has taken place
+    (or at least the archival object is changed somehow).
     '''
     archiver_interfaces.IPipe.send_data('archived',
                                         resource_id=resource['id'],
                                         queue=queue,
                                         cache_filepath=cache_filepath)
 
+
 def notify_package(package, queue, cache_filepath):
     '''
-    Broadcasts a notification that a package archival has taken place (or at least
-    the archival object is changed somehow). e.g. ckanext-packagezip listens for this
+    Broadcasts an IPipe notification that a package archival has taken place
+    (or at least the archival object is changed somehow). e.g.
+    ckanext-packagezip listens for this
     '''
     archiver_interfaces.IPipe.send_data('package-archived',
                                         package_id=package['id'],
                                         queue=queue,
                                         cache_filepath=cache_filepath)
+
+
+def get_plugins_waiting_on_ipipe():
+    return [observer.name for observer in
+            p.PluginImplementations(archiver_interfaces.IPipe)]
 
 
 def _clean_content_type(ct):
@@ -474,6 +510,17 @@ def _clean_content_type(ct):
     if 'charset' in ct:
         return ct[:ct.index(';')]
     return ct
+
+
+def _set_user_agent_string(headers):
+    '''
+    Update the passed headers object with a `User-Agent` key, if there is a
+    USER_AGENT_STRING option in settings.
+    '''
+    ua_str = settings.USER_AGENT_STRING
+    if ua_str is not None:
+        headers['User-Agent'] = ua_str
+    return headers
 
 
 def tidy_url(url):
@@ -610,13 +657,14 @@ def save_archival(resource, status_id, reason, url_redirected_to,
     log.info('Archival saved: %r', archival)
     model.repo.commit_and_remove()
 
-def convert_requests_exceptions(log, func, *args, **kwargs):
+
+def requests_wrapper(log, func, *args, **kwargs):
     '''
     Run a requests command, catching exceptions and reraising them as
     DownloadException. Status errors, such as 404 or 500 do not cause
     exceptions, instead exposed as not response.ok.
     e.g.
-    >>> convert_requests_exceptions(log, requests.get, url, timeout=url_timeout)
+    >>> requests_wrapper(log, requests.get, url, timeout=url_timeout)
     runs:
         res = requests.get(url, timeout=url_timeout)
     '''

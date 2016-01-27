@@ -5,6 +5,7 @@ import time
 import re
 import shutil
 import itertools
+import ckan.plugins as p
 
 from pylons import config
 
@@ -18,8 +19,8 @@ class Archiver(CkanCommand):
     '''
     Download and save copies of all package resources.
 
-    The result of each download attempt is saved to the CKAN task_status table, so the
-    information can be used later for QA analysis.
+    The result of each download attempt is saved to the CKAN task_status table,
+    so the information can be used later for QA analysis.
 
     Usage:
 
@@ -36,7 +37,8 @@ class Archiver(CkanCommand):
              It does not change the cache_url etc. in the Resource
 
         paster archiver clean-cached-resources
-           - Removes all cache_urls and other references to resource files on disk.
+           - Removes all cache_urls and other references to resource files on
+             disk.
 
         paster archiver view [{dataset name/id}]
            - Views info archival info, in general and if you specify one, about
@@ -130,7 +132,7 @@ class Archiver(CkanCommand):
 
     def update(self):
         from ckan import model
-        from ckanext.archiver import plugin
+        from ckanext.archiver import lib
         packages = []
         resources = []
         if len(self.args) > 1:
@@ -140,7 +142,7 @@ class Archiver(CkanCommand):
                 if group:
                     if group.is_organization:
                         packages.extend(
-                            model.Session.query(model.Package)\
+                            model.Session.query(model.Package)
                                  .filter_by(owner_org=group.id))
                     else:
                         packages.extend(group.packages(with_private=True))
@@ -184,21 +186,31 @@ class Archiver(CkanCommand):
 
         self.log.info('Queue: %s', self.options.queue)
         for package in packages:
-            pkg_resources = \
-                [res for res in
-                    itertools.chain.from_iterable(
-                        (rg.resources_all for rg in package.resource_groups_all)
-                    )
-                 if res.state == 'active']
+            if p.toolkit.check_ckan_version(max_version='2.2.99'):
+                # earlier CKANs had ResourceGroup
+                pkg_resources = \
+                    [res for res in
+                        itertools.chain.from_iterable(
+                            (rg.resources_all
+                             for rg in package.resource_groups_all)
+                        )
+                     if res.state == 'active']
+            else:
+                pkg_resources = \
+                    [res for res in package.resources_all
+                     if res.state == 'active']
             self.log.info('Queuing dataset %s (%s resources)',
                           package.name, len(pkg_resources))
-            plugin.create_archiver_package_task(package, self.options.queue)
+            lib.create_archiver_package_task(package, self.options.queue)
             time.sleep(0.1)  # to try to avoid Redis getting overloaded
 
         for resource in resources:
-            package = resource.resource_group.package
+            if p.toolkit.check_ckan_version(max_version='2.2.99'):
+                package = resource.resource_group.package
+            else:
+                package = resource.package
             self.log.info('Queuing resource %s/%s', package.name, resource.id)
-            plugin.create_archiver_resource_task(resource, self.options.queue)
+            lib.create_archiver_resource_task(resource, self.options.queue)
             time.sleep(0.05)  # to try to avoid Redis getting overloaded
 
         self.log.info('Completed queueing')
@@ -274,7 +286,7 @@ class Archiver(CkanCommand):
 
         archive_root = config.get('ckanext-archiver.archive_dir')
         if not archive_root:
-            log.error("Could not find archiver root")
+            self.log.error("Could not find archiver root")
             return
 
         # We'll use this to match the UUID part of the path
@@ -315,7 +327,7 @@ class Archiver(CkanCommand):
                     continue
 
                 try:
-                    s = os.stat(fp)
+                    os.stat(fp)
                 except OSError:
                     perm_error += 1
                     writer.writerow([resource.id, fp.encode('utf-8'), "File not readable"])
@@ -407,7 +419,7 @@ class Archiver(CkanCommand):
             {'model': model, 'ignore_auth': True, 'defer_commit': True}, {}
         )
 
-        site_url_base = config['ckan.cache_url_root'].rstrip('/')
+        site_url_base = config['ckanext-archiver.cache_url_root'].rstrip('/')
         old_dir_regex = re.compile(r'(.*)/([a-f0-9\-]+)/([^/]*)$')
         new_dir_regex = re.compile(r'(.*)/[a-f0-9]{2}/[a-f0-9\-]{36}/[^/]*$')
         for resource in model.Session.query(model.Resource).\
@@ -425,10 +437,16 @@ class Archiver(CkanCommand):
             # check the package isn't deleted
             # Need to refresh the resource's session
             resource = model.Session.query(model.Resource).get(resource.id)
-            if resource.resource_group and resource.resource_group.package:
-                if resource.resource_group.package.state == model.State.DELETED:
-                    print 'Package is deleted'
-                    continue
+            if p.toolkit.check_ckan_version(max_version='2.2.99'):
+                package = None
+                if resource.resource_group:
+                    package = resource.resource_group.package
+            else:
+                package = resource.package
+
+            if package and package.state == model.State.DELETED:
+                print 'Package is deleted'
+                continue       
 
             if url_base != site_url_base:
                 print 'ERROR Base URL is incorrect: %r != %r' % (url_base, site_url_base)

@@ -1,17 +1,19 @@
 import logging
-import os
 
 from ckan import model
-from ckan.model.types import make_uuid
 from ckan import plugins as p
+
 from ckanext.report.interfaces import IReport
 from ckanext.archiver.interfaces import IPipe
-import ckan.plugins.toolkit as toolkit
+from ckanext.archiver.logic import action, auth
+from ckanext.archiver import helpers
+from ckanext.archiver import lib
+from ckanext.archiver.model import Archival, aggregate_archivals_for_a_dataset
 
 log = logging.getLogger(__name__)
 
 
-class ArchiverPlugin(p.SingletonPlugin):
+class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
     """
     Registers to be notified whenever CKAN resources are created or their URLs
     change, and will create a new ckanext.archiver celery task to archive the
@@ -20,6 +22,10 @@ class ArchiverPlugin(p.SingletonPlugin):
     p.implements(p.IDomainObjectModification, inherit=True)
     p.implements(IReport)
     p.implements(p.IConfigurer, inherit=True)
+    p.implements(p.IActions)
+    p.implements(p.IAuthFunctions)
+    p.implements(p.ITemplateHelpers)
+    p.implements(p.IPackageController, inherit=True)
 
     # IDomainObjectModification
 
@@ -29,7 +35,7 @@ class ArchiverPlugin(p.SingletonPlugin):
 
         log.debug('Notified of package event: %s %s', entity.id, operation)
 
-        create_archiver_package_task(entity, 'priority')
+        lib.create_archiver_package_task(entity, 'priority')
 
     # IReport
 
@@ -42,26 +48,57 @@ class ArchiverPlugin(p.SingletonPlugin):
     # IConfigurer
 
     def update_config(self, config):
-        toolkit.add_template_directory(config, 'templates')
+        p.toolkit.add_template_directory(config, 'templates')
 
-def create_archiver_resource_task(resource, queue):
-    from pylons import config
-    from ckan.lib.celery_app import celery
-    package = resource.resource_group.package
-    task_id = '%s/%s/%s' % (package.name, resource.id[:4], make_uuid()[:4])
-    ckan_ini_filepath = os.path.abspath(config['__file__'])
-    celery.send_task('archiver.update_resource', args=[ckan_ini_filepath, resource.id, queue],
-                     task_id=task_id, queue=queue)
-    log.debug('Archival of resource put into celery queue %s: %s/%s url=%r', queue, package.name, resource.id, resource.url)
+    # IActions
 
-def create_archiver_package_task(package, queue):
-    from ckan.lib.celery_app import celery
-    from pylons import config
-    task_id = '%s/%s' % (package.name, make_uuid()[:4])
-    ckan_ini_filepath = os.path.abspath(config['__file__'])
-    celery.send_task('archiver.update_package', args=[ckan_ini_filepath, package.id, queue],
-                     task_id=task_id, queue=queue)
-    log.debug('Archival of package put into celery queue %s: %s', queue, package.name)
+    def get_actions(self):
+        return {
+            'archiver_resource_show': action.archiver_resource_show,
+            'archiver_dataset_show': action.archiver_dataset_show,
+            }
+
+    # IAuthFunctions
+
+    def get_auth_functions(self):
+        return {
+            'archiver_resource_show': auth.archiver_resource_show,
+            'archiver_dataset_show': auth.archiver_dataset_show,
+            }
+
+    # ITemplateHelpers
+
+    def get_helpers(self):
+        return dict((name, function) for name, function
+                    in helpers.__dict__.items()
+                    if callable(function) and name[0] != '_')
+
+    # IPackageController
+
+    def after_show(self, context, pkg_dict):
+        # Insert the archival info into the package_dict so that it is
+        # available on the API.
+        # When you edit the dataset, these values will not show in the form,
+        # it they will be saved in the resources (not the dataset). I can't see
+        # and easy way to stop this, but I think it is harmless. It will get
+        # overwritten here when output again.
+        archivals = Archival.get_for_package(pkg_dict['id'])
+        if not archivals:
+            return
+        # dataset
+        dataset_archival = aggregate_archivals_for_a_dataset(archivals)
+        pkg_dict['archiver'] = dataset_archival
+        # resources
+        archivals_by_res_id = dict((a.resource_id, a) for a in archivals)
+        for res in pkg_dict['resources']:
+            archival = archivals_by_res_id.get(res['id'])
+            if archival:
+                archival_dict = archival.as_dict()
+                del archival_dict['id']
+                del archival_dict['package_id']
+                del archival_dict['resource_id']
+                res['archiver'] = archival_dict
+
 
 class TestIPipePlugin(p.SingletonPlugin):
     """

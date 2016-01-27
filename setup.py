@@ -14,7 +14,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # http://packaging.python.org/en/latest/tutorial.html#version
-    version='0.2.0',
+    version='2.0.0',
 
     description='''Archives resources in CKAN (CKAN Extension)''',
     long_description=long_description,
@@ -59,17 +59,8 @@ setup(
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
 
-    # List run-time dependencies here.  These will be installed by pip when your
-    # project is installed. For an analysis of "install_requires" vs pip's
-    # requirements files see:
-    # https://packaging.python.org/en/latest/technical.html#install-requires-vs-requirements-files
     install_requires=[
-        'celery==2.4.2',
-        'kombu==2.1.3',
-        'kombu-sqlalchemy==1.1.0',
-        'SQLAlchemy>=0.6.6',
-        'requests>=1.1.0',
-        'flask==0.8'  # flask needed for tests
+        # Requirements defined in requirements.txt
     ],
 
     # If there are data files included in your packages that need to be
@@ -91,6 +82,7 @@ setup(
     entry_points='''
         [paste.paster_command]
         archiver = ckanext.archiver.commands:Archiver
+        celeryd2 = ckanext.archiver.command_celery:CeleryCmd
 
         [ckan.plugins]
         archiver = ckanext.archiver.plugin:ArchiverPlugin
@@ -113,5 +105,7 @@ setup(
             ('**.js', 'javascript', None),
             ('**/templates/**.html', 'ckan', None),
         ],
-    }
+    },
+
+    namespace_packages=['ckanext', 'ckanext.archiver'],
 )
