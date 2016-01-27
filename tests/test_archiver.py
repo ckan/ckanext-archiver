@@ -12,14 +12,15 @@ from nose.tools import assert_raises, assert_equal
 
 from ckan import model
 from ckan import plugins
-from ckan.tests import BaseCase
 from ckan.logic import get_action
 try:
     from ckan.tests.helpers import reset_db
     from ckan.tests import factories as ckan_factories
+    from ckan.tests.legacy import BaseCase
 except ImportError:
     from ckan.new_tests.helpers import reset_db
     from ckan.new_tests import factories as ckan_factories
+    from ckan.tests import BaseCase
 
 from ckanext.archiver import model as archiver_model
 from ckanext.archiver.model import Archival
@@ -374,6 +375,7 @@ class TestArchiver(BaseCase):
         assert queue == 'queue1'
         assert params.get('package_id') == pkg['id']
         assert params.get('resource_id') == None
+
 
 class TestDownload(BaseCase):
     '''Tests of the download method (and things it calls).
