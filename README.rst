@@ -269,16 +269,17 @@ Config settings
                 root /www/resource_cache;
             }
 
-Legacy settings:
+Legacy settings
+~~~~~~~~~~~~~~~
 
-   Older versions of ckanext-archiver put these settings in
-   ckanext/archiver/settings.py as variables ARCHIVE_DIR and MAX_CONTENT_LENGTH
-   but this is deprecated as of ckanext-archiver 2.0.
+Older versions of ckanext-archiver put these settings in
+ckanext/archiver/settings.py as variables ARCHIVE_DIR and MAX_CONTENT_LENGTH
+but this is no longer available.
 
-   There used to be an option DATA_FORMATS for filtering the resources
-   archived, but that has now been removed in ckanext-archiver v2.0, since it
-   is now not only caching files, but is seen as a broken link checker, which
-   applies whatever the format.
+There used to be an option DATA_FORMATS for filtering the resources
+archived, but that has now been removed in ckanext-archiver v2.0, since it
+is now not only caching files, but is seen as a broken link checker, which
+applies whatever the format.
 
 
 Using Archiver
