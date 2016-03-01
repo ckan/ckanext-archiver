@@ -16,10 +16,6 @@ from requests.packages import urllib3
 
 from ckan.lib.celery_app import celery
 from ckan import plugins as p
-try:
-    from ckanext.archiver import settings
-except ImportError:
-    from ckanext.archiver import default_settings as settings
 from ckanext.archiver import interfaces as archiver_interfaces
 
 toolkit = p.toolkit
@@ -201,6 +197,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue):
     from ckan import model
     from pylons import config
     from ckan.plugins import toolkit
+    from ckanext.archiver import default_settings as settings
 
     get_action = toolkit.get_action
 
@@ -301,7 +298,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue):
 
 
 def download(context, resource, url_timeout=30,
-             max_content_length=settings.MAX_CONTENT_LENGTH,
+             max_content_length='default',
              method='GET'):
     '''Given a resource, tries to download it.
 
@@ -324,7 +321,11 @@ def download(context, resource, url_timeout=30,
     Returns a dict of results of a successful download:
       mimetype, size, hash, headers, saved_file, url_redirected_to
     '''
+    from ckanext.archiver import default_settings as settings
     log = update_resource.get_logger()
+
+    if max_content_length == 'default':
+        max_content_length = settings.MAX_CONTENT_LENGTH
 
     url = resource['url']
 
@@ -441,6 +442,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
 
     Returns: {cache_filepath, cache_url}
     """
+    from ckanext.archiver import default_settings as settings
     relative_archive_path = os.path.join(resource['id'][:2], resource['id'])
     archive_dir = os.path.join(settings.ARCHIVE_DIR, relative_archive_path)
     if not os.path.exists(archive_dir):
@@ -517,6 +519,7 @@ def _set_user_agent_string(headers):
     Update the passed headers object with a `User-Agent` key, if there is a
     USER_AGENT_STRING option in settings.
     '''
+    from ckanext.archiver import default_settings as settings
     ua_str = settings.USER_AGENT_STRING
     if ua_str is not None:
         headers['User-Agent'] = ua_str
