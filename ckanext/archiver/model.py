@@ -66,7 +66,7 @@ class Status:
 
     @classmethod
     def is_status_broken(cls, status_id):
-        if status_id == 0:
+        if status_id < 10:
             return False
         elif status_id < 20:
             return True
