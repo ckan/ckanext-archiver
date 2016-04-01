@@ -15,6 +15,7 @@ cd ckan
 export ckan_branch=master
 echo "CKAN branch: $ckan_branch"
 git checkout $ckan_branch
+echo "CKAN commit: "`git rev-parse HEAD`
 python setup.py develop
 pip install -r requirements.txt --allow-all-external
 pip install -r dev-requirements.txt --allow-all-external
