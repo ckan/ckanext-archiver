@@ -557,8 +557,9 @@ def tidy_url(url):
     except urllib3.exceptions.LocationParseError, e:
         raise LinkInvalidError('URL parsing failure: %s' % e)
 
-    # Check we aren't using any schemes we shouldn't be
-    if not parsed_url.scheme in ALLOWED_SCHEMES:
+    # Check we aren't using any schemes we shouldn't be.
+    # Scheme is case-insensitive.
+    if not parsed_url.scheme.lower() in ALLOWED_SCHEMES:
         raise LinkInvalidError('Invalid url scheme. Please use one of: %s' %
                                ' '.join(ALLOWED_SCHEMES))
 
