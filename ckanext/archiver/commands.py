@@ -8,9 +8,12 @@ import itertools
 import ckan.plugins as p
 
 from pylons import config
+try:
+    from collections import OrderedDict  # from python 2.7
+except ImportError:
+    from sqlalchemy.util import OrderedDict
 
 from ckan.lib.cli import CkanCommand
-from ckan.lib.helpers import OrderedDict
 
 REQUESTS_HEADER = {'content-type': 'application/json'}
 
