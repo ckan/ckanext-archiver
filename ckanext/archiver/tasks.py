@@ -82,6 +82,9 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     '''
     Archive a resource.
     '''
+    load_config(ckan_ini_filepath)
+    register_translator()
+
     log = update_resource.get_logger()
     log.info('Starting update_resource task: res_id=%r queue=%s', resource_id, queue)
 
@@ -92,7 +95,7 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     # Also put try/except around it is easier to monitor ckan's log rather than
     # celery's task status.
     try:
-        result = _update_resource(ckan_ini_filepath, resource_id, queue)
+        result = _update_resource(resource_id, queue, log)
         return result
     except Exception, e:
         if os.environ.get('DEBUG'):
@@ -107,40 +110,46 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     '''
     Archive a package.
     '''
-    from ckan import model
-
-    get_action = toolkit.get_action
-
     load_config(ckan_ini_filepath)
     register_translator()
 
     log = update_package.get_logger()
-    log.info('Starting update_package task: package_id=%r queue=%s', package_id, queue)
+    log.info('Starting update_package task: package_id=%r queue=%s',
+             package_id, queue)
 
-    num_archived = 0
     # Do all work in a sub-routine since it can then be tested without celery.
     # Also put try/except around it is easier to monitor ckan's log rather than
     # celery's task status.
     try:
-        context_ = {'model': model, 'ignore_auth': True, 'session': model.Session}
-        package = get_action('package_show')(context_, {'id': package_id})
-
-        for resource in package['resources']:
-            resource_id = resource['id']
-            res = _update_resource(ckan_ini_filepath, resource_id, queue)
-            if res:
-                num_archived += 1
+        _update_package(package_id, queue, log)
     except Exception, e:
         if os.environ.get('DEBUG'):
             raise
-        # Any problem at all is logged and reraised so that celery can log it too
-        log.error('Error occurred during archiving package: %s\nPackage: %r %r',
-                  e, package_id, package['name'] if 'package' in dir() else '')
+        # Any problem at all is logged and reraised so that celery can log it
+        # too
+        log.error('Error occurred during archiving package: %s\nPackage: %s',
+                  e, package_id)
         raise
+
+
+def _update_package(package_id, queue, log):
+    from ckan import model
+
+    get_action = toolkit.get_action
+
+    num_archived = 0
+    context_ = {'model': model, 'ignore_auth': True, 'session': model.Session}
+    package = get_action('package_show')(context_, {'id': package_id})
+
+    for resource in package['resources']:
+        resource_id = resource['id']
+        res = _update_resource(resource_id, queue, log)
+        if res:
+            num_archived += 1
 
     if num_archived > 0:
         log.info("Notifying package as %d items were archived", num_archived)
-        notify_package(package, queue, ckan_ini_filepath)
+        notify_package(package, queue)
     else:
         log.info("Not notifying package as 0 items were archived")
 
@@ -167,7 +176,7 @@ def _update_search_index(package_id, log):
     log.info('Search indexed %s', package['name'])
 
 
-def _update_resource(ckan_ini_filepath, resource_id, queue):
+def _update_resource(resource_id, queue, log):
     """
     Link check and archive the given resource.
     If successful, updates the archival table with the cache_url & hash etc.
@@ -189,11 +198,6 @@ def _update_resource(ckan_ini_filepath, resource_id, queue):
         }
     If not successful, returns None.
     """
-    log = update_resource.get_logger()
-
-    load_config(ckan_ini_filepath)
-    register_translator()
-
     from ckan import model
     from pylons import config
     from ckan.plugins import toolkit
@@ -489,7 +493,7 @@ def notify_resource(resource, queue, cache_filepath):
                                         cache_filepath=cache_filepath)
 
 
-def notify_package(package, queue, cache_filepath):
+def notify_package(package, queue):
     '''
     Broadcasts an IPipe notification that a package archival has taken place
     (or at least the archival object is changed somehow). e.g.
@@ -497,8 +501,7 @@ def notify_package(package, queue, cache_filepath):
     '''
     archiver_interfaces.IPipe.send_data('package-archived',
                                         package_id=package['id'],
-                                        queue=queue,
-                                        cache_filepath=cache_filepath)
+                                        queue=queue)
 
 
 def get_plugins_waiting_on_ipipe():

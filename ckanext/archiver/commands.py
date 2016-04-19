@@ -34,6 +34,10 @@ class Archiver(CkanCommand):
            - Archive all resources or just those belonging to a specific
              package or group, if specified
 
+        paster archiver update-test [{package-name/id}|{group-name/id}]
+           - Does an archive in the current process i.e. avoiding Celery queue
+             so that you can test on the command-line more easily.
+
         paster archiver clean-status
            - Cleans the TaskStatus records that contain the status of each
              archived resource, whether it was successful or not, with errors.
@@ -102,6 +106,8 @@ class Archiver(CkanCommand):
 
         if cmd == 'update':
             self.update()
+        elif cmd == 'update-test':
+            self.update_test()
         elif cmd == 'clean-status':
             self.clean_status()
         elif cmd == 'clean-cached-resources':
@@ -134,12 +140,65 @@ class Archiver(CkanCommand):
             self.log.error('Command %s not recognized' % (cmd,))
 
     def update(self):
-        from ckan import model
         from ckanext.archiver import lib
+        for pkg_or_res, is_pkg, num_resources_for_pkg, pkg_for_res in \
+                self._get_packages_and_resources_in_args(self.args[1:]):
+            if is_pkg:
+                package = pkg_or_res
+                self.log.info('Queuing dataset %s (%s resources)',
+                              package.name, num_resources_for_pkg)
+                lib.create_archiver_package_task(package, self.options.queue)
+                time.sleep(0.1)  # to try to avoid Redis getting overloaded
+            else:
+                resource = pkg_or_res
+                package = pkg_for_res
+                self.log.info('Queuing resource %s/%s',
+                              package.name, resource.id)
+                lib.create_archiver_resource_task(resource, self.options.queue)
+                time.sleep(0.05)  # to try to avoid Redis getting overloaded
+        self.log.info('Completed queueing')
+
+    def update_test(self):
+        from ckanext.archiver import tasks
+        # Prevent it loading config again
+        tasks.load_config = lambda x: None
+        log = logging.getLogger('ckanext.archiver')
+        for pkg_or_res, is_pkg, num_resources_for_pkg, pkg_for_res in \
+                self._get_packages_and_resources_in_args(self.args[1:]):
+            if is_pkg:
+                package = pkg_or_res
+                self.log.info('Archiving dataset %s (%s resources)',
+                              package.name, num_resources_for_pkg)
+                tasks._update_package(package.id, self.options.queue, log)
+            else:
+                resource = pkg_or_res
+                package = pkg_for_res
+                self.log.info('Queuing resource %s/%s',
+                              package.name, resource.id)
+                tasks._update_resource(resource.id, self.options.queue, log)
+        self.log.info('Completed test update')
+
+    def _get_packages_and_resources_in_args(self, args):
+        '''Given command-line arguments that specify one or more datasets or
+        resources, it generates a list of those packages & resources with some
+        basic properties.
+
+        Returns a tuple:
+           (pkg_or_res, is_pkg, num_resources_for_pkg, pkg_for_res)
+           When is_pkg=True:
+               pkg_or_res - package object
+               num_resources_for_pkg - number of resources it has
+               pkg_for_res - None
+           When is_pkg=False:
+               pkg_or_res - resource object
+               num_resources_for_pkg - None
+               pkg_for_res - package object relating to the given resource
+        '''
+        from ckan import model
         packages = []
         resources = []
-        if len(self.args) > 1:
-            for arg in self.args[1:]:
+        if args:
+            for arg in args:
                 # try arg as a group id/name
                 group = model.Group.get(arg)
                 if group:
@@ -202,21 +261,14 @@ class Archiver(CkanCommand):
                 pkg_resources = \
                     [res for res in package.resources_all
                      if res.state == 'active']
-            self.log.info('Queuing dataset %s (%s resources)',
-                          package.name, len(pkg_resources))
-            lib.create_archiver_package_task(package, self.options.queue)
-            time.sleep(0.1)  # to try to avoid Redis getting overloaded
+            yield (package, True, len(pkg_resources), None)
 
         for resource in resources:
             if p.toolkit.check_ckan_version(max_version='2.2.99'):
                 package = resource.resource_group.package
             else:
                 package = resource.package
-            self.log.info('Queuing resource %s/%s', package.name, resource.id)
-            lib.create_archiver_resource_task(resource, self.options.queue)
-            time.sleep(0.05)  # to try to avoid Redis getting overloaded
-
-        self.log.info('Completed queueing')
+            yield (resource, False, None, package)
 
     def view(self, package_ref=None):
         from ckan import model
