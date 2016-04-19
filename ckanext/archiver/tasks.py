@@ -559,7 +559,7 @@ def tidy_url(url):
 
     # Check we aren't using any schemes we shouldn't be.
     # Scheme is case-insensitive.
-    if not parsed_url.scheme.lower() in ALLOWED_SCHEMES:
+    if not parsed_url.scheme or not parsed_url.scheme.lower() in ALLOWED_SCHEMES:
         raise LinkInvalidError('Invalid url scheme. Please use one of: %s' %
                                ' '.join(ALLOWED_SCHEMES))
 
