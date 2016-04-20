@@ -345,7 +345,9 @@ def download(context, resource, url_timeout=30,
     # May raise DownloadException
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
     res = requests_wrapper(log, method_func, url, timeout=url_timeout,
-                           stream=True, headers=headers)
+                           stream=True, headers=headers,
+                           verify=verify_https(),
+                           )
     url_redirected_to = res.url if url != res.url else None
 
     if context.get('previous') and ('etag' in res.headers):
@@ -507,6 +509,11 @@ def notify_package(package, queue):
 def get_plugins_waiting_on_ipipe():
     return [observer.name for observer in
             p.PluginImplementations(archiver_interfaces.IPipe)]
+
+
+def verify_https():
+    from pylons import config
+    return toolkit.asbool(config.get('ckanext-archiver.verify_https', True))
 
 
 def _clean_content_type(ct):

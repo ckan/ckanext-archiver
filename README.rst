@@ -247,6 +247,7 @@ Config settings
       * ``ckanext-archiver.cache_url_root`` = URL where you will be publicly serving the cached files stored locally at ckanext-archiver.archive_dir.
       * ``ckanext-archiver.max_content_length`` = the maximum size (in bytes) of files to archive (default ``50000000`` =50MB)
       * ``ckanext-archiver.user_agent_string`` = identifies the archiver to servers it archives from
+      * ``ckanext-archiver.verify_https`` = true/false whether you want to verify https connections and therefore fail if it is specified in the URL but does not verify.
 
 4.  Nightly report generation
 
