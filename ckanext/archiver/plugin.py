@@ -30,6 +30,14 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
     # IDomainObjectModification
 
     def notify(self, entity, operation=None):
+        if not p.toolkit.check_ckan_version('2.3'):
+            self._notify(entity, operation)
+
+    def notify_after_commit(self, entity, operation=None):
+        if p.toolkit.check_ckan_version('2.3'):
+            self._notify(entity, operation)
+
+    def _notify(self, entity, operation=None):
         if not isinstance(entity, model.Package):
             return
 
