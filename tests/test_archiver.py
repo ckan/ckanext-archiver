@@ -340,13 +340,13 @@ class TestArchiver(BaseCase):
     def test_package_achived_when_resource_modified(self, url, send_task):
         data_dict = self._test_resource(url)
         data_dict['url'] = 'http://example.com/foo'
-        context = {'model': model, 
+        context = {'model': model,
                    'user': 'test',
                    'ignore_auth': True,
                    'session': model.Session}
         result = get_action('resource_update')(context, data_dict)
 
-        assert send_task.called == True
+        assert_equal(send_task.called, True)
 
         args, kwargs = send_task.call_args
         assert args == ('archiver.update_package',)
