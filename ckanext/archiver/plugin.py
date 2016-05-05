@@ -45,8 +45,11 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
         lib.create_archiver_package_task(entity, 'priority')
 
     def _is_it_sufficient_change_to_run_archiver(self, package, operation):
-        ''' Returns True if it is a new dataset or there are resources that
-        have been added, deleted or URL changed in this revision.
+        ''' Returns True if in this revision any of these happened:
+        * it is a new dataset
+        * dataset licence changed (affects qa)
+        * there are resources that have been added or deleted
+        * resources have changed their URL or format (affects qa)
         '''
         if operation == 'new':
             log.debug('New package - will archive')
@@ -89,6 +92,17 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
             log.warn('No sign of previous package - will archive anyway')
             return True
 
+        # has the licence changed?
+        old_licence = (old_pkg_dict['license_id'],
+                       lib.get_extra_from_pkg_dict(old_pkg_dict, 'licence')
+                       or None)
+        new_licence = (package.license_id,
+                       package.extras.get('licence') or None)
+        if old_licence != new_licence:
+            log.debug('Licence has changed - will archive: %r->%r',
+                      old_licence, new_licence)
+            return True
+
         # have any resources been added or deleted?
         old_resources = dict((res['id'], res)
                              for res in old_pkg_dict['resources'])
@@ -105,14 +119,17 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
                       added_res_ids)
             return True
 
-        # have any resource urls changed?
+        # have any resources' url/format changed?
         for res in package.resources:
-            old_res_url = old_resources[res.id]['url']
-            if old_res_url != res.url:
-                log.debug('Resource url changed - will archive. '
-                          'id=%s pos=%s url="%s"->"%s"',
-                          res.id[:4], res.position, old_res_url, res.url)
-                return True
+            for key in ('url', 'format'):
+                old_res_value = old_resources[res.id][key]
+                new_res_value = getattr(res, key)
+                if old_res_value != new_res_value:
+                    log.debug('Resource %s changed - will archive. '
+                              'id=%s pos=%s url="%s"->"%s"',
+                              key, res.id[:4], res.position,
+                              old_res_value, new_res_value)
+                    return True
             log.debug('Resource unchanged. pos=%s id=%s',
                       res.position, res.id[:4])
 
