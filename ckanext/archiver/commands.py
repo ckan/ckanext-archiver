@@ -12,6 +12,7 @@ try:
     from collections import OrderedDict  # from python 2.7
 except ImportError:
     from sqlalchemy.util import OrderedDict
+from sqlalchemy.sql import func
 
 from ckan.lib.cli import CkanCommand
 
@@ -71,8 +72,15 @@ class Archiver(CkanCommand):
              cache_url on each resource to reflect the new location.
 
         paster archiver migrate
-            - Updates the database schema to include new fields.
+           - Updates the database schema to include new fields.
 
+        paster archiver size-report
+           - Reports on the sizes of files archived.
+
+        paster archiver delete-files-larger-than-max
+           - For when you reduce the ckanext-archiver.max_content_length and
+             want to delete archived files that are now above the threshold,
+             and stop referring to these files in the Archival table of the db.
     '''
     # TODO
     #    paster archiver clean-files
@@ -136,6 +144,10 @@ class Archiver(CkanCommand):
             self.migrate_archive_dirs()
         elif cmd == 'migrate':
             self.migrate()
+        elif cmd == 'size-report':
+            self.size_report()
+        elif cmd == 'delete-files-larger-than-max':
+            self.delete_files_larger_than_max_content_length()
         else:
             self.log.error('Command %s not recognized' % (cmd,))
 
@@ -540,3 +552,74 @@ class Archiver(CkanCommand):
                 print 'Successfully updated resource'
             else:
                 print 'ERROR updating resource: %r' % result
+
+    def size_report(self):
+        from ckan import model
+        from ckanext.archiver.model import Archival
+        kb = 1024
+        mb = 1024*1024
+        gb = pow(1024, 3)
+        size_bins = [
+            (kb, '<1 KB'), (10*kb, '1-10 KB'), (100*kb, '10-100 KB'),
+            (mb, '100 KB - 1 MB'), (10*mb, '1-10 MB'), (100*mb, '10-100 MB'),
+            (gb, '100 MB - 1 GB'), (10*gb, '1-10 GB'), (100*gb, '10-100 GB'),
+            (gb*gb, '>100 GB'),
+            ]
+        previous_bin = (0, '')
+        counts = []
+        total_sizes = []
+        #example_resources = []
+        print '{:>15}{:>10}{:>20}'.format(
+            'file size', 'no. files', 'files size (bytes)')
+        for size_bin in size_bins:
+            q = model.Session.query(Archival) \
+                     .filter(Archival.size > previous_bin[0]) \
+                     .filter(Archival.size <= size_bin[0])
+            count = q.count()
+            counts.append(count)
+            #q = model.Session.query(Archival, model.Resource) \
+            #         .filter(Archival.size > previous_bin[0]) \
+            #         .filter(Archival.size <= size_bin[0]) \
+            #         .join(model.Resource,
+            #               Archival.resource_id == model.Resource.id) \
+            #         .first()
+            #example_res = q.Resource if q else None
+            #example_resources.append(example_res)
+            total_size = model.Session.query(func.sum(Archival.size)) \
+                     .filter(Archival.size > previous_bin[0]) \
+                     .filter(Archival.size <= size_bin[0]) \
+                     .all()[0][0]
+            total_size = int(total_size or 0)
+            total_sizes.append(total_size)
+            print '{:>15}{:>10,}{:>20,}'.format(size_bin[1], count, total_size)
+            previous_bin = size_bin
+        print 'Totals: {:,} {:,}'.format(sum(counts), sum(total_sizes))
+
+    def delete_files_larger_than_max_content_length(self):
+        from ckan import model
+        from ckanext.archiver.model import Archival
+        from ckanext.archiver import default_settings as settings
+        max_size = settings.MAX_CONTENT_LENGTH
+        archivals = model.Session.query(Archival) \
+            .filter(Archival.size > max_size) \
+            .join(model.Resource,
+                  Archival.resource_id == model.Resource.id) \
+            .all()
+        total_size = int(model.Session.query(func.sum(Archival.size)) \
+            .filter(Archival.size > max_size) \
+            .all()[0][0] or 0)
+        print '{} archivals above the {:,} threshold with total size {:,}'.format(
+            len(archivals), max_size, total_size)
+        raw_input('Press Enter to DELETE them')
+        for archival in archivals:
+            print 'Deleting %r' % archival
+            filepath = archival.cache_filepath
+            try:
+                os.unlink(filepath)
+            except OSError:
+                print 'ERROR deleting %s' % filepath.decode('utf8')
+            else:
+                archival.cache_filepath = None
+                model.Session.commit()
+                model.Session.flush()
+                print '..deleted %s' % filepath.decode('utf8')
