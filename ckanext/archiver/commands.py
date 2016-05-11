@@ -568,26 +568,31 @@ class Archiver(CkanCommand):
         previous_bin = (0, '')
         counts = []
         total_sizes = []
-        #example_resources = []
         print '{:>15}{:>10}{:>20}'.format(
             'file size', 'no. files', 'files size (bytes)')
         for size_bin in size_bins:
             q = model.Session.query(Archival) \
                      .filter(Archival.size > previous_bin[0]) \
-                     .filter(Archival.size <= size_bin[0])
+                     .filter(Archival.size <= size_bin[0]) \
+                     .filter(Archival.cache_filepath != '') \
+                     .join(model.Resource,
+                           Archival.resource_id == model.Resource.id) \
+                     .filter(model.Resource.state != 'deleted') \
+                     .join(model.Package,
+                           Archival.package_id == model.Package.id) \
+                     .filter(model.Package.state != 'deleted')
             count = q.count()
             counts.append(count)
-            #q = model.Session.query(Archival, model.Resource) \
-            #         .filter(Archival.size > previous_bin[0]) \
-            #         .filter(Archival.size <= size_bin[0]) \
-            #         .join(model.Resource,
-            #               Archival.resource_id == model.Resource.id) \
-            #         .first()
-            #example_res = q.Resource if q else None
-            #example_resources.append(example_res)
             total_size = model.Session.query(func.sum(Archival.size)) \
                      .filter(Archival.size > previous_bin[0]) \
                      .filter(Archival.size <= size_bin[0]) \
+                     .filter(Archival.cache_filepath != '') \
+                     .join(model.Resource,
+                           Archival.resource_id == model.Resource.id) \
+                     .filter(model.Resource.state != 'deleted') \
+                     .join(model.Package,
+                           Archival.package_id == model.Package.id) \
+                     .filter(model.Package.state != 'deleted') \
                      .all()[0][0]
             total_size = int(total_size or 0)
             total_sizes.append(total_size)
@@ -602,8 +607,7 @@ class Archiver(CkanCommand):
         max_size = settings.MAX_CONTENT_LENGTH
         archivals = model.Session.query(Archival) \
             .filter(Archival.size > max_size) \
-            .join(model.Resource,
-                  Archival.resource_id == model.Resource.id) \
+            .filter(Archival.cache_filepath != '') \
             .all()
         total_size = int(model.Session.query(func.sum(Archival.size)) \
             .filter(Archival.size > max_size) \
@@ -613,7 +617,24 @@ class Archiver(CkanCommand):
         raw_input('Press Enter to DELETE them')
         for archival in archivals:
             print 'Deleting %r' % archival
+            resource = model.Resource.get(archival.resource_id)
+            if resource.state == 'deleted':
+                print 'Nothing to delete - Resource is deleted - deleting archival'
+                model.Session.delete(archival)
+                model.Session.commit()
+                model.Session.flush()
+                continue
+            pkg = model.Package.get(archival.package_id)
+            if pkg.state == 'deleted':
+                print 'Nothing to delete - Dataset is deleted - deleting archival'
+                model.Session.delete(archival)
+                model.Session.commit()
+                model.Session.flush()
+                continue
             filepath = archival.cache_filepath
+            if not os.path.exists(filepath):
+                print 'Skipping - file not on disk'
+                continue
             try:
                 os.unlink(filepath)
             except OSError:
