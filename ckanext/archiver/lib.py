@@ -2,7 +2,6 @@ import os
 import logging
 import ckan.plugins as p
 
-from ckan import model
 from ckan.model.types import make_uuid
 from ckan.lib.celery_app import celery
 
@@ -34,3 +33,10 @@ def create_archiver_package_task(package, queue):
                      task_id=task_id, queue=queue)
     log.debug('Archival of package put into celery queue %s: %s',
               queue, package.name)
+
+
+def get_extra_from_pkg_dict(pkg_dict, key, default=None):
+    for extra in pkg_dict['extras']:
+        if extra['key'] == key:
+            return extra['value']
+    return default
