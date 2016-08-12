@@ -10,6 +10,8 @@ def archiver_is_resource_broken_html(resource):
     archival = resource.get('archiver')
     if not archival:
         return tk.literal('<!-- No archival info for this resource -->')
+    if not isinstance(archival, dict):
+        return tk.literal('<!-- Archival info was of the wrong type -->')
     extra_vars = {'resource': resource}
     extra_vars.update(archival)
     return tk.literal(
@@ -21,6 +23,8 @@ def archiver_is_resource_cached_html(resource):
     archival = resource.get('archiver')
     if not archival:
         return tk.literal('<!-- No archival info for this resource -->')
+    if not isinstance(archival, dict):
+        return tk.literal('<!-- Archival info was of the wrong type -->')
     extra_vars = {'resource': resource}
     extra_vars.update(archival)
     return tk.literal(
