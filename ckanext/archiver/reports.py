@@ -85,7 +85,7 @@ def broken_links_index(include_sub_organizations=False):
     num_broken_resources = 0
     num_packages = 0
     num_resources = 0
-    for org_name, org_counts in sorted(results.iteritems(), key=lambda r: r[0]):
+    for org_name, org_counts in results.iteritems():
         data.append(OrderedDict((
             ('organization_title', results[org_name]['organization_title']),
             ('organization_name', org_name),
