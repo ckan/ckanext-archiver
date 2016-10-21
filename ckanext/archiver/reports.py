@@ -23,16 +23,18 @@ def broken_links_index(include_sub_organizations=False):
 
     counts = {}
     # Get all the broken datasets and build up the results by org
-    for org in model.Session.query(model.Group)\
-                          .filter(model.Group.type == 'organization')\
-                          .filter(model.Group.state == 'active').all():
+    orgs = model.Session.query(model.Group)\
+        .filter(model.Group.type == 'organization')\
+        .filter(model.Group.state == 'active').all()
+    for org in add_progress_bar(
+            orgs, 'Part 1/2' if include_sub_organizations else None):
         archivals = model.Session.query(Archival)\
-                         .filter(Archival.is_broken == True)\
-                         .join(model.Package, Archival.package_id == model.Package.id)\
-                         .filter(model.Package.owner_org == org.id)\
-                         .filter(model.Package.state == 'active')\
-                         .join(model.Resource, Archival.resource_id == model.Resource.id)\
-                         .filter(model.Resource.state == 'active')
+            .filter(Archival.is_broken == True)\
+            .join(model.Package, Archival.package_id == model.Package.id)\
+            .filter(model.Package.owner_org == org.id)\
+            .filter(model.Package.state == 'active')\
+            .join(model.Resource, Archival.resource_id == model.Resource.id)\
+            .filter(model.Resource.state == 'active')
         broken_resources = archivals.count()
         broken_datasets = archivals.distinct(model.Package.id).count()
         num_datasets = model.Session.query(model.Package)\
@@ -58,7 +60,7 @@ def broken_links_index(include_sub_organizations=False):
 
     counts_with_sub_orgs = copy.deepcopy(counts)  # new dict
     if include_sub_organizations:
-        for org_name in counts_with_sub_orgs:
+        for org_name in add_progress_bar(counts_with_sub_orgs, 'Part 2/2'):
             org = model.Group.by_name(org_name)
 
             for sub_org_id, sub_org_name, sub_org_title, sub_org_parent_id \
@@ -101,6 +103,9 @@ def broken_links_index(include_sub_organizations=False):
         num_broken_resources += org_counts_['broken_resources']
         num_packages += org_counts_['packages']
         num_resources += org_counts_['resources']
+
+    data.sort(key=lambda x: (-x['broken_package_count'],
+                             -x['broken_resource_count']))
 
     return {'table': data,
             'num_broken_packages': num_broken_packages,
@@ -238,3 +243,16 @@ broken_links_report_info = {
     'generate': broken_links,
     'template': 'report/broken_links.html',
     }
+
+
+def add_progress_bar(iterable, caption=None):
+    try:
+        # Add a progress bar, if it is installed
+        import progressbar
+        bar = progressbar.ProgressBar(widgets=[
+            (caption + ' ') if caption else '',
+            progressbar.Percentage(), ' ',
+            progressbar.Bar(), ' ', progressbar.ETA()])
+        return bar(iterable)
+    except ImportError:
+        return iterable

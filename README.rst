@@ -135,7 +135,7 @@ NB Previously you needed both ckanext-archiver and ckanext-qa to see the broken 
 Migrations post 2.0
 -------------------
 
-Over time it is possible that the database structure will change.  In these cases you can use the migrate command to update the database schema.  
+Over time it is possible that the database structure will change.  In these cases you can use the migrate command to update the database schema.
 
     ::
         paster --plugin=ckanext-archiver archiver migrate -c <path to CKAN ini file>
