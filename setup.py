@@ -107,5 +107,5 @@ setup(
         ],
     },
 
-    namespace_packages=['ckanext', 'ckanext.archiver'],
+    namespace_packages=['ckanext'],
 )
