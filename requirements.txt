@@ -1,0 +1,2 @@
+-e git+git@github.com:datagovuk/ckanext-report#egg=ckanext-report
+-e .

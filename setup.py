@@ -65,7 +65,8 @@ setup(
         'kombu-sqlalchemy~=1.1.0',
         'SQLAlchemy~=0.9.6',
         'requests~=2.3.0',
-        'progressbar~=2.3'
+        'progressbar~=2.3',
+        'ckanext-report==0.1'
     ],
 
     # If there are data files included in your packages that need to be
