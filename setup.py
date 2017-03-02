@@ -60,7 +60,12 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
 
     install_requires=[
-        # Requirements defined in requirements.txt
+        'celery~=2.4.2',
+        'kombu~=2.1.3',
+        'kombu-sqlalchemy~=1.1.0',
+        'SQLAlchemy~=0.9.6',
+        'requests~=2.3.0',
+        'progressbar~=2.3'
     ],
 
     # If there are data files included in your packages that need to be
