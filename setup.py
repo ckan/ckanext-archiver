@@ -61,8 +61,7 @@ setup(
 
     install_requires=[
         'celery~=2.4.2',
-        'kombu~=2.1.3',
-        'kombu-sqlalchemy~=1.1.0',
+        'kombu~=2.5',# 'kombu~=3.0.35',>=2.5.15
         'SQLAlchemy~=0.9.6',
         'requests~=2.3.0',
         'progressbar~=2.3',
