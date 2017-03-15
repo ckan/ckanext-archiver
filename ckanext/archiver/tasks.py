@@ -233,7 +233,6 @@ def _update_resource(resource_id, queue, log):
     requires_archive = True
 
     url = resource['url']
-    url = tidy_url(url)
     if not url.startswith('http'):
         url = config['ckan.site_url'].rstrip('/') + url
 
