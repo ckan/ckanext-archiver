@@ -1,5 +1,4 @@
 celery~=2.4.2
-ckanext-report==0.1
 kombu~=2.5
 progressbar~=2.3
 requests~=2.3.0
