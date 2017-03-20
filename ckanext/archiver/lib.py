@@ -36,7 +36,7 @@ def create_archiver_package_task(package, queue):
 
 
 def get_extra_from_pkg_dict(pkg_dict, key, default=None):
-    for extra in pkg_dict['extras']:
+    for extra in pkg_dict.get('extras', []):
         if extra['key'] == key:
             return extra['value']
     return default

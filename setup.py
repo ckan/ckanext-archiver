@@ -60,7 +60,12 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
 
     install_requires=[
-        # Requirements defined in requirements.txt
+        'celery',
+        'kombu',
+        'SQLAlchemy',
+        'requests',
+        'progressbar',
+        'ckanext-report'
     ],
 
     # If there are data files included in your packages that need to be
