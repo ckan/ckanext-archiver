@@ -50,3 +50,6 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+# Translations extra files
+ckanext/*/i18n/_reused_translations.pot
+

@@ -36,15 +36,15 @@ and all the Archival.as_dict() info from the package_show's resource['archiver']
   {%- if cache_url -%}
     <a href="{{ cache_url }}">
       <span class="icon icon-download-alt"></span>
-      Download cached copy
+      {% trans %}Download cached copy{% endtrans %}
     </a><br>
-    Size: {{ size|filesizeformat }} <br>
-    Cached on: {{ h.render_datetime(last_success) }}
+    {% trans %}Size{% endtrans %}: {{ size|filesizeformat }} <br>
+    {% trans %}Cached on{% endtrans %}: {{ h.render_datetime(last_success) }}
     {% if is_broken %}
-      (before it was broken)
+      ({% trans %}before it was broken{% endtrans %})
     {% endif %}<br>
   {% else %}
-    No cached copy available<br>
+    {% trans %}No cached copy available{% endtrans %}<br>
   {% endif %}
 </div>
 

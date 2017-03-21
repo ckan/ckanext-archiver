@@ -14,6 +14,7 @@ import time
 
 from requests.packages import urllib3
 
+from ckan.common import _
 from ckan.lib.celery_app import celery
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
@@ -384,8 +385,8 @@ def download(context, resource, url_timeout=30,
             log.warning('Resource too large to download: %s > max (%s). '
                         'Resource: %s %r', content_length,
                         max_content_length, resource['id'], url)
-            raise ChooseNotToDownload('Content-length %s exceeds maximum '
-                                      'allowed value %s' %
+            raise ChooseNotToDownload(_('Content-length %s exceeds maximum '
+                                      'allowed value %s') %
                                       (content_length, max_content_length),
                                       url_redirected_to)
     # content_length in the headers is useful but can be unreliable, so when we
@@ -399,13 +400,13 @@ def download(context, resource, url_timeout=30,
 
     # APIs can return status 200, but contain an error message in the body
     if response_is_an_api_error(content):
-        raise DownloadError('Server content contained an API error message: %s' % \
+        raise DownloadError(_('Server content contained an API error message: %s') % \
                             content[:250],
                             url_redirected_to)
 
     content_length = len(content)
     if content_length > max_content_length:
-        raise ChooseNotToDownload("Content-length %s exceeds maximum allowed value %s" %
+        raise ChooseNotToDownload(_("Content-length %s exceeds maximum allowed value %s") %
                                   (content_length, max_content_length),
                                   url_redirected_to)
 
@@ -421,7 +422,7 @@ def download(context, resource, url_timeout=30,
         # record fact that resource is zero length
         log.warning('Resource found was length %i - not archiving. Resource: %s %r',
                  length, resource['id'], url)
-        raise DownloadError("Content-length after streaming was %i" % length,
+        raise DownloadError(_("Content-length after streaming was %i") % length,
                             url_redirected_to)
 
     log.info('Resource downloaded: id=%s url=%r cache_filename=%s length=%s hash=%s',
@@ -477,7 +478,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
     if not context.get('cache_url_root'):
         log.warning('Not saved cache_url because no value for '
                     'ckanext-archiver.cache_url_root in config')
-        raise ArchiveError('No value for ckanext-archiver.cache_url_root in config')
+        raise ArchiveError(_('No value for ckanext-archiver.cache_url_root in config'))
     cache_url = urlparse.urljoin(context['cache_url_root'],
                                  '%s/%s' % (relative_archive_path, file_name))
     return {'cache_filepath': saved_file,
@@ -565,16 +566,16 @@ def tidy_url(url):
     try:
         parsed_url = urllib3.util.parse_url(url)
     except urllib3.exceptions.LocationParseError, e:
-        raise LinkInvalidError('URL parsing failure: %s' % e)
+        raise LinkInvalidError(_('URL parsing failure: %s') % e)
 
     # Check we aren't using any schemes we shouldn't be.
     # Scheme is case-insensitive.
     if not parsed_url.scheme or not parsed_url.scheme.lower() in ALLOWED_SCHEMES:
-        raise LinkInvalidError('Invalid url scheme. Please use one of: %s' %
+        raise LinkInvalidError(_('Invalid url scheme. Please use one of: %s') %
                                ' '.join(ALLOWED_SCHEMES))
 
     if not parsed_url.host:
-        raise LinkInvalidError('URL parsing failure - did not find a host name')
+        raise LinkInvalidError(_('URL parsing failure - did not find a host name'))
 
     return url
 
@@ -601,7 +602,7 @@ def _save_resource(resource, response, max_file_size, chunk_size=1024*16):
 
             if length >= max_file_size:
                 raise ChooseNotToDownload(
-                    "Content length %s exceeds maximum allowed value %s" %
+                    _("Content-length %s exceeds maximum allowed value %s") %
                     (length, max_file_size))
 
     os.close(fd)
@@ -697,19 +698,19 @@ def requests_wrapper(log, func, *args, **kwargs):
             response = func(*args, **kwargs)
 
     except requests.exceptions.ConnectionError, e:
-        raise DownloadException('Connection error: %s' % e)
+        raise DownloadException(_('Connection error: %s') % e)
     except requests.exceptions.HTTPError, e:
-        raise DownloadException('Invalid HTTP response: %s' % e)
+        raise DownloadException(_('Invalid HTTP response: %s') % e)
     except requests.exceptions.Timeout, e:
-        raise DownloadException('Connection timed out after %ss' % kwargs.get('timeout', '?'))
+        raise DownloadException(_('Connection timed out after %ss') % kwargs.get('timeout', '?'))
     except requests.exceptions.TooManyRedirects, e:
-        raise DownloadException('Too many redirects')
+        raise DownloadException(_('Too many redirects'))
     except requests.exceptions.RequestException, e:
-        raise DownloadException('Error downloading: %s' % e)
+        raise DownloadException(_('Error downloading: %s') % e)
     except Exception, e:
         if os.environ.get('DEBUG'):
             raise
-        raise DownloadException('Error with the download: %s' % e)
+        raise DownloadException(_('Error with the download: %s') % e)
     return response
 
 
@@ -842,29 +843,29 @@ def link_checker(context, data):
         headers = res.headers
     except httplib.InvalidURL, ve:
         log.error("Could not make a head request to %r, error is: %s. Package is: %r. This sometimes happens when using an old version of requests on a URL which issues a 301 redirect. Version=%s", url, ve, data.get('package'), requests.__version__)
-        raise LinkHeadRequestError("Invalid URL or Redirect Link")
+        raise LinkHeadRequestError(_("Invalid URL or Redirect Link"))
     except ValueError, ve:
         log.error("Could not make a head request to %r, error is: %s. Package is: %r.", url, ve, data.get('package'))
-        raise LinkHeadRequestError("Could not make HEAD request")
+        raise LinkHeadRequestError(_("Could not make HEAD request"))
     except requests.exceptions.ConnectionError, e:
-        raise LinkHeadRequestError('Connection error: %s' % e)
+        raise LinkHeadRequestError(_('Connection error: %s') % e)
     except requests.exceptions.HTTPError, e:
-        raise LinkHeadRequestError('Invalid HTTP response: %s' % e)
+        raise LinkHeadRequestError(_('Invalid HTTP response: %s') % e)
     except requests.exceptions.Timeout, e:
-        raise LinkHeadRequestError('Connection timed out after %ss' % url_timeout)
+        raise LinkHeadRequestError(_('Connection timed out after %ss') % url_timeout)
     except requests.exceptions.TooManyRedirects, e:
-        raise LinkHeadRequestError('Too many redirects')
+        raise LinkHeadRequestError(_('Too many redirects'))
     except requests.exceptions.RequestException, e:
-        raise LinkHeadRequestError('Error during request: %s' % e)
+        raise LinkHeadRequestError(_('Error during request: %s') % e)
     except Exception, e:
-        raise LinkHeadRequestError('Error with the request: %s' % e)
+        raise LinkHeadRequestError(_('Error with the request: %s') % e)
     else:
         if res.status_code == 405:
             # this suggests a GET request may be ok, so proceed to that
             # in the download
             raise LinkHeadMethodNotSupported()
         if not res.ok or res.status_code >= 400:
-            error_message = 'Server returned HTTP error status: %s %s' % \
+            error_message = _('Server returned HTTP error status: %s %s') % \
                 (res.status_code, res.reason)
             raise LinkHeadRequestError(error_message)
     return json.dumps(dict(headers))
