@@ -237,7 +237,7 @@ def _update_resource(resource_id, queue, log):
 
     def _save(status_id, exception, resource, url_redirected_to=None,
               download_result=None, archive_result=None):
-        reason = '%s' % exception
+        reason = u'%s' % exception
         save_archival(resource, status_id,
                       reason, url_redirected_to,
                       download_result, archive_result,

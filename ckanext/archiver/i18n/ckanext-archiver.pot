@@ -17,94 +17,105 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
 
-#: ckanext/archiver/tasks.py:388 ckanext/archiver/tasks.py:409
+#: ckanext/archiver/reports.py:239
+#: ckanext/archiver/templates/report/broken_links.html:4
+#: ckanext/archiver/templates/report/broken_links.html:15
+#: ckanext/archiver/templates/report/broken_links.html:35
+msgid "Broken links"
+msgstr ""
+
+#: ckanext/archiver/reports.py:240
+msgid "Dataset resource URLs that are found to result in errors when resolved."
+msgstr ""
+
+#: ckanext/archiver/tasks.py:409 ckanext/archiver/tasks.py:430
+#: ckanext/archiver/tasks.py:626
 #, python-format
 msgid "Content-length %s exceeds maximum allowed value %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:403
+#: ckanext/archiver/tasks.py:424
 #, python-format
 msgid "Server content contained an API error message: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:425
+#: ckanext/archiver/tasks.py:446
 #, python-format
 msgid "Content-length after streaming was %i"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:481
+#: ckanext/archiver/tasks.py:502
 msgid "No value for ckanext-archiver.cache_url_root in config"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:569
+#: ckanext/archiver/tasks.py:590
 #, python-format
 msgid "URL parsing failure: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:574
+#: ckanext/archiver/tasks.py:595
 #, python-format
 msgid "Invalid url scheme. Please use one of: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:578
+#: ckanext/archiver/tasks.py:599
 msgid "URL parsing failure - did not find a host name"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:605
-#, python-format
-msgid "Content length %s exceeds maximum allowed value %s"
-msgstr ""
-
-#: ckanext/archiver/tasks.py:701 ckanext/archiver/tasks.py:851
+#: ckanext/archiver/tasks.py:722 ckanext/archiver/tasks.py:872
 #, python-format
 msgid "Connection error: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:703 ckanext/archiver/tasks.py:853
+#: ckanext/archiver/tasks.py:724 ckanext/archiver/tasks.py:874
 #, python-format
 msgid "Invalid HTTP response: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:705 ckanext/archiver/tasks.py:855
+#: ckanext/archiver/tasks.py:726 ckanext/archiver/tasks.py:876
 #, python-format
 msgid "Connection timed out after %ss"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:707 ckanext/archiver/tasks.py:857
+#: ckanext/archiver/tasks.py:728 ckanext/archiver/tasks.py:878
 msgid "Too many redirects"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:709
+#: ckanext/archiver/tasks.py:730
 #, python-format
 msgid "Error downloading: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:713
+#: ckanext/archiver/tasks.py:734
 #, python-format
 msgid "Error with the download: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:846
+#: ckanext/archiver/tasks.py:867
 msgid "Invalid URL or Redirect Link"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:849
+#: ckanext/archiver/tasks.py:870
 msgid "Could not make HEAD request"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:859
+#: ckanext/archiver/tasks.py:880
 #, python-format
 msgid "Error during request: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:861
+#: ckanext/archiver/tasks.py:882
 #, python-format
 msgid "Error with the request: %s"
 msgstr ""
 
-#: ckanext/archiver/tasks.py:868
+#: ckanext/archiver/tasks.py:889
 #, python-format
 msgid "Server returned HTTP error status: %s %s"
+msgstr ""
+
+#: ckanext/archiver/templates/archiver/is_resource_broken.html:38
+msgid "Link is broken"
 msgstr ""
 
 #: ckanext/archiver/templates/archiver/is_resource_broken.html:43
@@ -163,26 +174,13 @@ msgid "No cached copy available"
 msgstr ""
 
 #: ckanext/archiver/templates/report/broken_links.html:3
+#: ckanext/archiver/templates/report/broken_links.html:14
 #: ckanext/archiver/templates/report/broken_links.html:34
 msgid "Broken datasets"
 msgstr ""
 
-#: ckanext/archiver/templates/report/broken_links.html:4
-#: ckanext/archiver/templates/report/broken_links.html:15
-#: ckanext/archiver/templates/report/broken_links.html:35
-msgid "Broken links"
-msgstr ""
-
-#: ckanext/archiver/templates/report/broken_links.html:14
-msgid "Datasets with broken links"
-msgstr ""
-
 #: ckanext/archiver/templates/report/broken_links.html:16
 msgid "% Broken links"
-msgstr ""
-
-#: ckanext/archiver/templates/report/broken_links.html:43
-msgid "Publisher"
 msgstr ""
 
 #: ckanext/archiver/templates/report/broken_links.html:45

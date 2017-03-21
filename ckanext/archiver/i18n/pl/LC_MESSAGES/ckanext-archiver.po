@@ -18,91 +18,106 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
 
-#: ckanext/archiver/tasks.py:388 ckanext/archiver/tasks.py:409
-#: ckanext/archiver/tasks.py:605
+#: ckanext/archiver/reports.py:239
+#: ckanext/archiver/templates/report/broken_links.html:4
+#: ckanext/archiver/templates/report/broken_links.html:15
+#: ckanext/archiver/templates/report/broken_links.html:35
+msgid "Broken links"
+msgstr "Błędne linki"
+
+#: ckanext/archiver/reports.py:240
+msgid "Dataset resource URLs that are found to result in errors when resolved."
+msgstr "Adresy URL zewnętrznych zasobów, których nie udało się pobrać."
+
+#: ckanext/archiver/tasks.py:409 ckanext/archiver/tasks.py:430
+#: ckanext/archiver/tasks.py:626
 #, python-format
 msgid "Content-length %s exceeds maximum allowed value %s"
 msgstr "Rozmiar zasobu %s przekracza dozwolone maksimum %s bajtów"
 
-#: ckanext/archiver/tasks.py:403
+#: ckanext/archiver/tasks.py:424
 #, python-format
 msgid "Server content contained an API error message: %s"
 msgstr "Serwer odpowiedział błędem API: %s"
 
-#: ckanext/archiver/tasks.py:425
+#: ckanext/archiver/tasks.py:446
 #, python-format
 msgid "Content-length after streaming was %i"
 msgstr "Rozmiar zasobu po pobraniu wyniósł %i bajtów"
 
-#: ckanext/archiver/tasks.py:481
+#: ckanext/archiver/tasks.py:502
 msgid "No value for ckanext-archiver.cache_url_root in config"
 msgstr "Brak w konfiguracji definicji ckanext-archiver.cache_url_root"
 
-#: ckanext/archiver/tasks.py:569
+#: ckanext/archiver/tasks.py:590
 #, python-format
 msgid "URL parsing failure: %s"
 msgstr "Wystąpił błąd parsowania URL: %s"
 
-#: ckanext/archiver/tasks.py:574
+#: ckanext/archiver/tasks.py:595
 #, python-format
 msgid "Invalid url scheme. Please use one of: %s"
 msgstr "Niepoprawny protokół http. Wybierz jeden z: %s"
 
-#: ckanext/archiver/tasks.py:578
+#: ckanext/archiver/tasks.py:599
 msgid "URL parsing failure - did not find a host name"
 msgstr "Błąd parsowania URL - nie znaleziono nazwy hosta"
 
-#: ckanext/archiver/tasks.py:701 ckanext/archiver/tasks.py:851
+#: ckanext/archiver/tasks.py:722 ckanext/archiver/tasks.py:872
 #, python-format
 msgid "Connection error: %s"
 msgstr "Błąd połączenia: %s"
 
-#: ckanext/archiver/tasks.py:703 ckanext/archiver/tasks.py:853
+#: ckanext/archiver/tasks.py:724 ckanext/archiver/tasks.py:874
 #, python-format
 msgid "Invalid HTTP response: %s"
 msgstr "Błędna odpowiedź HTTP: %s"
 
-#: ckanext/archiver/tasks.py:705 ckanext/archiver/tasks.py:855
+#: ckanext/archiver/tasks.py:726 ckanext/archiver/tasks.py:876
 #, python-format
 msgid "Connection timed out after %ss"
 msgstr "Serwer nie odpowiedział po %s sekundach"
 
-#: ckanext/archiver/tasks.py:707 ckanext/archiver/tasks.py:857
+#: ckanext/archiver/tasks.py:728 ckanext/archiver/tasks.py:878
 msgid "Too many redirects"
 msgstr "Za dużo przekierowań"
 
-#: ckanext/archiver/tasks.py:709
+#: ckanext/archiver/tasks.py:730
 #, python-format
 msgid "Error downloading: %s"
 msgstr "Błąd podczas pobierania: %s"
 
-#: ckanext/archiver/tasks.py:713
+#: ckanext/archiver/tasks.py:734
 #, python-format
 msgid "Error with the download: %s"
 msgstr "Błąd podczas pobierania: %s"
 
-#: ckanext/archiver/tasks.py:846
+#: ckanext/archiver/tasks.py:867
 msgid "Invalid URL or Redirect Link"
 msgstr "Niepoprawny URL lub link przekierowujący"
 
-#: ckanext/archiver/tasks.py:849
+#: ckanext/archiver/tasks.py:870
 msgid "Could not make HEAD request"
 msgstr "Zapytanie typu HEAD nie było możliwe"
 
-#: ckanext/archiver/tasks.py:859
+#: ckanext/archiver/tasks.py:880
 #, python-format
 msgid "Error during request: %s"
 msgstr "Wystąpił błąd podczas odpytywania serwera: %s"
 
-#: ckanext/archiver/tasks.py:861
+#: ckanext/archiver/tasks.py:882
 #, python-format
 msgid "Error with the request: %s"
 msgstr "Wystąpił błąd podczas odpytywania serwera: %s"
 
-#: ckanext/archiver/tasks.py:868
+#: ckanext/archiver/tasks.py:889
 #, python-format
 msgid "Server returned HTTP error status: %s %s"
 msgstr "Serwer odpowiedział błędem HTTP: %s %s"
+
+#: ckanext/archiver/templates/archiver/is_resource_broken.html:38
+msgid "Link is broken"
+msgstr "Link jest błędny"
 
 #: ckanext/archiver/templates/archiver/is_resource_broken.html:43
 msgid "This is a one-off failure"
@@ -114,8 +129,8 @@ msgid ""
 "This resource has failed %(failure_count)s times in a row since it first "
 "failed: %(first_failure)s"
 msgstr ""
-"Archiwizowanie zasobu nie udało się %(failure_count)s raz z rzędu "
-"od momentu %(first_failure)s"
+"Archiwizowanie zasobu nie udało się %(failure_count)s raz z rzędu od "
+"momentu %(first_failure)s"
 
 #: ckanext/archiver/templates/archiver/is_resource_broken.html:48
 #, python-format
@@ -127,8 +142,7 @@ msgstr "Ostatnio udało się zarchiwizować zasób %(last_success)s"
 msgid ""
 "We do not have a past record of it working since the first check: "
 "%(created)s"
-msgstr ""
-"Zasób nie był dostępny od od kiedy badane są linki zewnętrzne: %(created)s"
+msgstr "Zasób nie był dostępny od od kiedy badane są linki zewnętrzne: %(created)s"
 
 #: ckanext/archiver/templates/archiver/is_resource_broken.html:53
 msgid "Link check is not conclusive"
@@ -169,23 +183,17 @@ msgstr "Brak zarchiwizowanej kopii zasobu"
 msgid "Broken datasets"
 msgstr "Zbiory z błędnymi linkami"
 
-#: ckanext/archiver/templates/report/broken_links.html:4
-#: ckanext/archiver/templates/report/broken_links.html:15
-#: ckanext/archiver/templates/report/broken_links.html:35
-msgid "Broken links"
-msgstr "Błędne linki"
-
 #: ckanext/archiver/templates/report/broken_links.html:16
 msgid "% Broken links"
 msgstr "% błędnych linków"
 
 #: ckanext/archiver/templates/report/broken_links.html:45
 msgid "Index/position of the resource in the dataset"
-msgstr "Pozycja zasobie w zbiorze"
+msgstr "Pozycja zasobu w zbiorze"
 
 #: ckanext/archiver/templates/report/broken_links.html:45
 msgid "Res"
-msgstr "Zbiór"
+msgstr "Zasób"
 
 #: ckanext/archiver/templates/report/broken_links.html:48
 msgid "Reason"
