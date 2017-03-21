@@ -42,19 +42,34 @@ def load_config(ckan_ini_filepath):
     request_config.host = parsed.netloc + parsed.path
     request_config.protocol = parsed.scheme
 
+    load_translations(conf.get('ckan.locale_default', 'en'))
 
-def register_translator():
+
+def load_translations(lang):
     # Register a translator in this thread so that
     # the _() functions in logic layer can work
+
+    import ckan.lib.i18n
     from paste.registry import Registry
     from pylons import translator
-    from ckan.lib.cli import MockTranslator
-    global registry
+    from pylons import request
+
     registry = Registry()
     registry.prepare()
-    global translator_obj
-    translator_obj = MockTranslator()
-    registry.register(translator, translator_obj)
+
+    class FakePylons:
+            translator = None
+    fakepylons = FakePylons()
+    class FakeRequest:
+        # Stores details of the translator
+        environ = {'pylons.pylons': fakepylons}
+    registry.register(request, FakeRequest())
+
+    # create translator
+    ckan.lib.i18n.set_lang(lang)
+
+    # pull out translator and register it
+    registry.register(translator, fakepylons.translator)
 
 class ArchiverError(Exception):
     pass
@@ -92,7 +107,6 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     Archive a resource.
     '''
     load_config(ckan_ini_filepath)
-    register_translator()
 
     log = update_resource.get_logger()
     log.info('Starting update_resource task: res_id=%r queue=%s', resource_id, queue)
@@ -120,7 +134,6 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     Archive a package.
     '''
     load_config(ckan_ini_filepath)
-    register_translator()
 
     log = update_package.get_logger()
     log.info('Starting update_package task: package_id=%r queue=%s',
