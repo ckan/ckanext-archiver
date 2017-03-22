@@ -9,6 +9,7 @@ import tempfile
 import shutil
 import datetime
 import copy
+import mimetypes
 import re
 import routes
 import time
@@ -18,6 +19,7 @@ from requests.packages import urllib3
 
 from ckan.common import _
 from ckan.lib.celery_app import celery
+from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
 
@@ -224,6 +226,7 @@ def _update_resource(resource_id, queue, log):
     from pylons import config
     from ckan.plugins import toolkit
     from ckanext.archiver import default_settings as settings
+    from ckanext.archiver.model import Status, Archival
 
     get_action = toolkit.get_action
 
@@ -251,9 +254,56 @@ def _update_resource(resource_id, queue, log):
     try_as_api = False
     requires_archive = True
 
+    url = resource['url']
+    if not url.startswith('http'):
+        url = config['ckan.site_url'].rstrip('/') + url
+
+    hosted_externally = not url.startswith(config['ckan.site_url'])
+    # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
+    if resource.get('url_type') == 'upload' and not hosted_externally:
+        log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
+
+        upload = uploader.ResourceUpload(resource)
+        filepath = upload.get_path(resource['id'])
+
+        try:
+            hash, length = _file_hashnlength(filepath)
+        except IOError, e:
+            log.error('Error while accessing local resource %s: %s', filepath, e)
+
+            download_status_id = Status.by_text('URL request failed')
+            _save(download_status_id, e, resource)
+            return
+
+        mimetype = None
+        headers = None
+        content_type, content_encoding = mimetypes.guess_type(url)
+        if content_type:
+            mimetype = _clean_content_type(content_type)
+            headers = {'Content-Type': content_type}
+
+        download_result_mock = {'mimetype': mimetype,
+            'size': length,
+            'hash': hash,
+            'headers': headers,
+            'saved_file': filepath,
+            'url_redirected_to': url,
+            'request_type': 'GET'}
+
+        archive_result_mock = {'cache_filepath': filepath,
+        'cache_url': url}
+
+        # Success
+        _save(Status.by_text('Archived successfully'), '', resource,
+            download_result_mock['url_redirected_to'], download_result_mock, archive_result_mock)
+
+        # The return value is only used by tests. Serialized for Celery.
+        return json.dumps(dict(download_result_mock, **archive_result_mock))
+        # endif: processing locally uploaded resource
+
+
     log.info("Attempting to download resource: %s" % resource['url'])
     download_result = None
-    from ckanext.archiver.model import Status, Archival
     download_status_id = Status.by_text('Archived successfully')
     context = {
         'site_url': config.get('ckan.site_url_internally') or config['ckan.site_url'],
@@ -348,18 +398,30 @@ def download(context, resource, url_timeout=30,
       mimetype, size, hash, headers, saved_file, url_redirected_to
     '''
     from ckanext.archiver import default_settings as settings
+    from pylons import config
     log = update_resource.get_logger()
 
     if max_content_length == 'default':
         max_content_length = settings.MAX_CONTENT_LENGTH
 
     url = resource['url']
-
     url = tidy_url(url)
 
-    if (resource.get('resource_type') == 'file.upload' and
+    if (resource.get('url_type') == 'upload' and
             not url.startswith('http')):
         url = context['site_url'].rstrip('/') + url
+
+    hosted_externally = not url.startswith(config['ckan.site_url'])
+    if resource.get('url_type') == 'upload' and hosted_externally:
+        # ckanext-cloudstorage for example does that
+
+        # enable ckanext-archiver.archive_cloud for qa to work on cloud resources
+        # till https://github.com/ckan/ckanext-qa/issues/48 is resolved
+        # Warning: this will result in double storage of all files below archival filesize limit
+
+        if not config.get('ckanext-archiver.archive_cloud', False):
+            raise ChooseNotToDownload('Skipping resource hosted externally to download resource: %s'
+                                      % url,  url)
 
     headers = _set_user_agent_string({})
 
@@ -457,6 +519,20 @@ def download(context, resource, url_timeout=30,
             'url_redirected_to': url_redirected_to,
             'request_type': method}
 
+def _file_hashnlength(local_path):
+    BLOCKSIZE = 65536
+    hasher = hashlib.sha1()
+    length = 0
+
+    with open(local_path, 'rb') as afile:
+        buf = afile.read(BLOCKSIZE)
+        while len(buf) > 0:
+            hasher.update(buf)
+            length += len(buf)
+
+            buf = afile.read(BLOCKSIZE)
+
+    return (unicode(hasher.hexdigest()), length)
 
 def archive_resource(context, resource, log, result=None, url_timeout=30):
     """
