@@ -1,7 +1,7 @@
 {% if c.options['organization'] == None %}
   <ul>
-      <li>Broken datasets: {{ c.data['num_broken_packages'] }} / {{ c.data['num_packages'] }} ({{ c.data.get('broken_package_percent') }}%)</li>
-      <li>Broken links: {{ c.data['num_broken_resources'] }} / {{ c.data['num_resources'] }} ({{ c.data.get('broken_resource_percent') }}%)</li>
+      <li>{% trans %}Broken datasets{% endtrans %}: {{ c.data['num_broken_packages'] }} / {{ c.data['num_packages'] }} ({{ c.data.get('broken_package_percent') }}%)</li>
+      <li>{% trans %}Broken links{% endtrans %}: {{ c.data['num_broken_resources'] }} / {{ c.data['num_resources'] }} ({{ c.data.get('broken_resource_percent') }}%)</li>
   </ul>
   <table class="table table-striped table-bordered table-condensed tablesorter" id="report-table">
     <col style="width: 60%" />
@@ -10,10 +10,10 @@
     <col style="width: 10%" />
     <thead>
     <tr>
-      <th class="header">Organization</th>
-      <th class="header">Datasets with broken links</th>
-      <th class="header">Broken links</th>
-      <th class="header">% Broken links</th>
+      <th class="header">{% trans %}Organization{% endtrans %}</th>
+      <th class="header">{% trans %}Broken datasets{% endtrans %}</th>
+      <th class="header">{% trans %}Broken links{% endtrans %}</th>
+      <th class="header">{{ _('% Broken links') }}</th>
     </tr>
    </thead>
    <tbody>
@@ -22,7 +22,7 @@
         <td>{{ h.link_to(row['organization_title'], h.report__relative_url_for(organization=row['organization_name'])) }}</td>
         <td>{{ row['broken_package_count'] }}</td>
         <td>{{ row['broken_resource_count'] }}</td>
-        <td>{{ row.get('broken_resource_percent') }}</td>
+        <td>{{ row.get('broken_resource_percent') }}%</td>
       </tr>
     {% endfor %}
    </tbody>
@@ -31,25 +31,25 @@
 {% else %}
 
   <ul>
-    <li>Broken datasets: {{ c.data['num_broken_packages'] }} / {{ c.data['num_packages'] }} ({{ c.data.get('broken_package_percent') }}%)</li>
-    <li>Broken links: {{ c.data['num_broken_resources'] }} / {{ c.data['num_resources'] }} ({{ c.data.get('broken_resource_percent') }}%)</li>
+    <li>{% trans %}Broken datasets{% endtrans %}: {{ c.data['num_broken_packages'] }} / {{ c.data['num_packages'] }} ({{ c.data.get('broken_package_percent') }}%)</li>
+    <li>{% trans %}Broken links{% endtrans %}: {{ c.data['num_broken_resources'] }} / {{ c.data['num_resources'] }} ({{ c.data.get('broken_resource_percent') }}%)</li>
   </ul>
   <table class="table table-striped table-bordered table-condensed tablesorter" id="report-table" style="width: 100%; table-layout: fixed;">
    <thead>
       <tr class="js-tooltip" style="letter-spacing: -1px; font-size: 13px;">
-        <th style="width: 100px">Dataset</th>
-        <th style="width: 45px">Notes</th>
+        <th style="width: 100px">{% trans %}Dataset{% endtrans %}</th>
+        <th style="width: 45px">{% trans %}Notes{% endtrans %}</th>
         {% if c.options['include_sub_organizations'] %}
-          <th style="width: 85px">Publisher</th>
+          <th style="width: 85px">{% trans %}Organization{% endtrans %}</th>
         {% endif %}
-        <th style="width: 20px" title="Index/position of the resource in the dataset">Res</th>
-        <th style="width: 190px">URL</th>
-        <th style="width: 75px">Status</th>
-        <th style="width: 120px">Reason</th>
-        <th style="width: 25px" title="Failed download attempts">No. of fails</th>
-        <th style="width: 75px" title="First failed attempt">First fail</th>
-        <th style="width: 75px" title="Most recent failed attempt">Latest fail</th>
-        <th style="width: 75px" title="The last time it was successfully obtained">Last success</th>
+        <th style="width: 20px" title="{% trans %}Index/position of the resource in the dataset{% endtrans %}">{% trans %}Res{% endtrans %}</th>
+        <th style="width: 190px">{% trans %}URL{% endtrans %}</th>
+        <th style="width: 75px">{% trans %}Status{% endtrans %}</th>
+        <th style="width: 120px">{% trans %}Reason{% endtrans %}</th>
+        <th style="width: 25px" title="{% trans %}Failed download attempts{% endtrans %}">{% trans %}No. of fails{% endtrans %}</th>
+        <th style="width: 75px" title="{% trans %}First failed attempt{% endtrans %}">{% trans %}First fail{% endtrans %}</th>
+        <th style="width: 75px" title="{% trans %}Most recent failed attempt{% endtrans %}">{% trans %}Latest fail{% endtrans %}</th>
+        <th style="width: 75px" title="{% trans %}The last time it was successfully obtained{% endtrans %}">{% trans %}Last success{% endtrans %}</th>
       </tr>
    </thead>
    <tbody>

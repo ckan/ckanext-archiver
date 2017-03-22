@@ -336,6 +336,18 @@ To run the tests:
     (pyenv)~/pyenv/src/ckan$ nosetests --ckan ../ckanext-archiver/tests/ --with-pylons=../ckanext-archiver/test-core.ini
 
 
+Translations
+------
+
+To translate plugin to a new language (ie. "pl") run `python setup.py init_catalog -l pl`.
+
+To update template file with new translation added in the code or templates
+run `python setup.py extract_messages` in the root plugin directory. Then run
+`./ckanext/archiver/i18n/unique_pot.sh -v` to strip other plugin's translations.
+
+To update translation files for locale "pl" with new template run `python setup.py update_catalog -l pl`.
+
+
 Building Debian package
 -----------------------
 

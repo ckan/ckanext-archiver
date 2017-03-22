@@ -4,6 +4,7 @@ try:
 except ImportError:
     from sqlalchemy.util import OrderedDict
 
+from ckan.common import _
 import ckan.model as model
 import ckan.plugins as p
 
@@ -235,7 +236,8 @@ def broken_links_option_combinations():
 
 broken_links_report_info = {
     'name': 'broken-links',
-    'description': 'Dataset resource URLs that are found to result in errors when resolved.',
+    'title': _('Broken links'),
+    'description': _('Dataset resource URLs that are found to result in errors when resolved.'),
     'option_defaults': OrderedDict((('organization', None),
                                     ('include_sub_organizations', False),
                                     )),

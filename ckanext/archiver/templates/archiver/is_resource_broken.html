@@ -35,27 +35,27 @@ and all the Archival.as_dict() info from the package_show's resource['archiver']
 <div class="archiver {% if is_broken %}link-broken{% elif is_broken == None %}link-not-sure{% else %}link-not-broken{% endif %}">
   {%- if is_broken == True -%}
     <span class="icon icon-exclamation-sign text-error"></span>
-    Link is broken<br>
+    {% trans %}Link is broken{% endtrans %}<br>
     {% if reason %}
       - {{ reason }}<br>
     {% endif %}
     {% if failure_count == 1 %}
-      <span>This is a one-off failure</span><br>
+      <span>{% trans %}This is a one-off failure{% endtrans %}</span><br>
     {% else %}
-      <span>This resource has failed {{ failure_count }} times in a row since it first failed: {{ h.render_datetime(first_failure) }}</span><br>
+      <span>{% trans first_failure=h.render_datetime(first_failure) %}This resource has failed {{ failure_count }} times in a row since it first failed: {{ first_failure }}{% endtrans %}</span><br>
     {% endif %}
     {% if last_success %}
-      <span>This resource was last ok: {{ h.render_datetime(last_success) }}</span><br>
+      <span>{% trans last_success=h.render_datetime(last_success) %}This resource was last ok: {{ last_success }}{% endtrans %}</span><br>
     {% else %}
-      <span>We do not have a past record of it working since the first check: {{ h.render_datetime(created) }}</span><br>
+      <span>{% trans created=h.render_datetime(created) %}We do not have a past record of it working since the first check: {{ created }}{% endtrans %}</span><br>
     {% endif %}
   {%- elif is_broken == None -%}
-    Link check is not conclusive<br>
+    {% trans %}Link check is not conclusive{% endtrans %}<br>
     {% if reason %}
       - {{ reason }}<br>
     {% endif %}
   {%- else-%}
-    Link is ok<br>
+    {% trans %}Link is ok{% endtrans %}<br>
     {% if reason %}
       - {{ reason }}<br>
     {% endif %}
@@ -65,6 +65,6 @@ and all the Archival.as_dict() info from the package_show's resource['archiver']
       This was tested with an older version of this resource. An update should occur soon.<!-- resource_timestamp {{resource_timestamp}} revision_timestamp {{resource['revision_timestamp']}}--> <br>
   {% endif %}
  #}
-  <span>Link checked: {{ h.render_datetime(updated) }}</span><br>
+  <span>{% trans updated=h.render_datetime(updated) %}Link checked: {{ updated }}{% endtrans %}</span><br>
 </div>
 
