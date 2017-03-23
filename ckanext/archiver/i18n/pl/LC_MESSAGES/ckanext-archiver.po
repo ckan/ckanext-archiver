@@ -142,7 +142,7 @@ msgstr "Ostatnio udało się zarchiwizować zasób %(last_success)s"
 msgid ""
 "We do not have a past record of it working since the first check: "
 "%(created)s"
-msgstr "Zasób nie był dostępny od od kiedy badane są linki zewnętrzne: %(created)s"
+msgstr "Zasób nie był dostępny od kiedy badane są linki zewnętrzne: %(created)s"
 
 #: ckanext/archiver/templates/archiver/is_resource_broken.html:53
 msgid "Link check is not conclusive"
