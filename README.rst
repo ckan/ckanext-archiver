@@ -295,11 +295,7 @@ However in production you'd run the priority and bulk queues separately, or else
     paster --plugin=ckanext-archiver celeryd2 run priority -c production.ini
     paster --plugin=ckanext-archiver celeryd2 run bulk -c production.ini
 
-For production use, we recommend setting up Celery to run with supervisord.
-For more information see:
-
-* http://docs.ckan.org/en/latest/extensions.html#enabling-an-extension-with-background-tasks
-* http://wiki.ckan.org/Writing_asynchronous_tasks
+For production use, we recommend setting up Celery to run with supervisord. `apt-get install supervisor` and use `bin/celery-supervisor.conf` as a configuration template.
 
 An archival can be triggered by adding a dataset with a resource or updating a resource URL. Alternatively you can run::
 
