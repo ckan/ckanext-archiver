@@ -175,8 +175,9 @@ def _update_package(package_id, queue, log):
         log.info("Notifying package as %d items were archived", num_archived)
         notify_package(package, queue)
     else:
-        log.info("Not notifying package as 0 items were archived")
-
+        #log.info("Not notifying package as 0 items were archived")
+	log.info("Notifying even though 0 items were archived")
+	notify_package(package, queue)
     # Refresh the index for this dataset, so that it contains the latest
     # archive info. However skip it if there are downstream plugins that will
     # do this anyway, since it is an expensive step to duplicate.
@@ -359,7 +360,9 @@ def _update_resource(resource_id, queue, log):
     # Archival
     log.info('Attempting to archive resource')
     try:
-        archive_result = archive_resource(context, resource, log, download_result)
+	#Default archive_result since we are foregoing archiving
+	archive_result = {'cache_filepath': 'None', 'cache_url': 'None'}
+        #archive_result = archive_resource(context, resource, log, download_result)
     except ArchiveError, e:
         log.error('System error during archival: %r, %r', e, e.args)
         _save(Status.by_text('System error during archival'), e, resource, download_result['url_redirected_to'])
@@ -495,10 +498,13 @@ def download(context, resource, url_timeout=30,
 
     log.info('Saving resource')
     try:
-        length, hash, saved_file_path = _save_resource(resource, res, max_content_length)
+	#We are forgoing saving the resource, writing the response content to disk
+	length, hash, saved_file_path = 3, 'None', 'None'
+        #length, hash, saved_file_path = _save_resource(resource, res, max_content_length)
     except ChooseNotToDownload, e:
         raise ChooseNotToDownload(str(e), url_redirected_to)
-    log.info('Resource saved. Length: %s File: %s', length, saved_file_path)
+    log.info('Resource was not saved or written to disk')
+   #log.info('Resource saved. Length: %s File: %s', length, saved_file_path)
 
     # zero length (or just one byte) indicates a problem
     if length < 2:
@@ -507,9 +513,9 @@ def download(context, resource, url_timeout=30,
                  length, resource['id'], url)
         raise DownloadError(_("Content-length after streaming was %i") % length,
                             url_redirected_to)
-
-    log.info('Resource downloaded: id=%s url=%r cache_filename=%s length=%s hash=%s',
-             resource['id'], url, saved_file_path, length, hash)
+    log.info('Resource not downloaded')
+    #log.info('Resource downloaded: id=%s url=%r cache_filename=%s length=%s hash=%s',
+  #           resource['id'], url, saved_file_path, length, hash)
 
     return {'mimetype': mimetype,
             'size': length,
