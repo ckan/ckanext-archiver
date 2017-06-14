@@ -479,11 +479,19 @@ def download(context, resource, url_timeout=30,
     # download, we will monitor it doesn't go over the max.
 
     # continue the download - stream the response body
+    #def get_content():
+        #return res.content
+    #instead of getting content, get the first 1024 bytes
     def get_content():
-        return res.content
+	for chunk in res.iter_content(chunk_size=1024):
+	    saved_chunk = chunk
+	    break
+	return saved_chunk
+	    
     log.info('Downloading the body')
     content = requests_wrapper(log, get_content)
-
+    log.info('THE LENGTH OF CONTENT IS %s' % len(content))
+    res.close()
     # APIs can return status 200, but contain an error message in the body
     if response_is_an_api_error(content):
         raise DownloadError(_('Server content contained an API error message: %s') % \
