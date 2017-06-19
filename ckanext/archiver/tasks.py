@@ -435,8 +435,8 @@ def download(context, resource, url_timeout=30,
     # start the download - just get the headers
     # May raise DownloadException
     if is_blacklisted:
-        pass
-    else:
+        raise ChooseNotToDownload(_("Url is blacklisted")
+    
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
     res = requests_wrapper(log, method_func, url, timeout=url_timeout,
                            stream=True, headers=headers,
