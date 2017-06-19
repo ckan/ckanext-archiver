@@ -428,8 +428,15 @@ def download(context, resource, url_timeout=30,
 
     headers = _set_user_agent_string({})
 
+    #Check if url is black listed first
+    resource = RemoteResource(url)    
+    is_blacklisted = resource.check_url_blacklist()
+
     # start the download - just get the headers
     # May raise DownloadException
+    if is_blacklisted:
+        raise ChooseNotToDownload(_("Url is blacklisted")
+    
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
     res = requests_wrapper(log, method_func, url, timeout=url_timeout,
                            stream=True, headers=headers,
@@ -481,17 +488,16 @@ def download(context, resource, url_timeout=30,
     # continue the download - stream the response body
     #def get_content():
         #return res.content
-    #instead of getting content, get the first 1024 bytes
+   #instead of getting content, get the first 1024 bytes
     def get_content():
-	for chunk in res.iter_content(chunk_size=1024):
-	    saved_chunk = chunk
-	    break
-	return saved_chunk
-	    
+        for chunk in res.iter_content(chunk_size=1024):
+            saved_chunk = chunk
+            break
+        return saved_chunk
+
     log.info('Downloading the body')
     content = requests_wrapper(log, get_content)
-    log.info('THE LENGTH OF CONTENT IS %s' % len(content))
-    res.close()
+
     # APIs can return status 200, but contain an error message in the body
     if response_is_an_api_error(content):
         raise DownloadError(_('Server content contained an API error message: %s') % \
@@ -981,4 +987,194 @@ def link_checker(context, data):
             raise LinkHeadRequestError(error_message)
     return json.dumps(dict(headers))
 
+URL_REGEX = re.compile(
+    r'^(?:http|ftp)s?://'   # http:// or https:// or ftp:// or ftps://
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+    r'(?::\d+)?'  # optional port
+    r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
+class RemoteResource(object):
+    # list of errors we want to avoid wasting time on.
+    ERRNO_BLOCK = {
+        101: 'Network is unreachable',
+    }
+    BLOCK_THRESHOLD = 15
+    def __init__(self, url):
+        self.url = url.strip()
+        self.status_code = 0
+        self.reason = ''
+        self.method = None
+        self.content_type = None
+        self.headers = {'User-Agent': 'Data.Gov Broken Link Checker'}
+
+    def get_content_type(self):
+        if not self.valid_url():
+            self.status_code = 400
+            self.reason = 'Invalid URL'
+            self.content_type = ''
+            return self.content_type
+
+        if 'ftp://' in self.url:
+            try:
+                # TODO break it up and code for each type of exceptions
+                from urlparse import urlparse
+                import ftplib
+                o = urlparse(self.url)
+
+                ftp_timeout = 20 # in seconds
+                ftp_server = o.hostname
+                ftp_user = 'anonymous' if not o.username else o.username
+                ftp_pass = 'anonymous@' if not o.username else o.password
+                ftp_port = 21 if not o.port else o.port
+                ftp_filepath = o.path
+
+                ftp = ftplib.FTP()
+                ftp.connect(ftp_server, port=ftp_port, timeout=ftp_timeout)
+                ftp.login(ftp_user, ftp_pass)
+                if ftp_filepath.strip('/'):
+                    assert ftp.nlst(ftp_filepath)
+                self.status_code = 200
+                return
+            except Exception, e:
+                self.status_code = 408
+                return
+
+        blacklist_errno = self.check_url_blacklist(self.url)
+        if blacklist_errno:
+            self.status_code = 500
+            self.reason = self.ERRNO_BLOCK.get(blacklist_errno)
+            log.error('get_content_type blacklisted ( %s ): %s: %s ' % (
+                    self.url, self.status_code, self.reason))
+            return None
+
+        try:
+            # http://docs.python-requests.org/en/latest/api/
+            method = 'HEAD'
+            r = requests.head(self.url, verify=False, timeout=20.0, allow_redirects=True, headers=self.headers)
+
+            if r.status_code > 399 or r.headers.get('content-type') is None:
+                method = 'GET'
+                r = requests.get(self.url, verify=False, timeout=20.0, allow_redirects=True, stream=True,
+                                 headers=self.headers)
+                r.raw.read(50)
+                if r.status_code > 399 or r.headers.get('content-type') is None:
+                    self.status_code = r.status_code
+                    self.reason = r.reason
+                    self.method = method
+                    self.content_type = None
+                    return self.content_type
+
+            content_type = r.headers.get('content-type')
+            self.content_type = content_type.split(';', 1)[0]
+            self.status_code = r.status_code
+            self.reason = r.reason
+            self.method = method
+            self.delete_url_blacklist(self.url)
+            return self.content_type
+
+        except Exception as ex:
+            self.status_code = 500
+            self.reason = ex.__class__.__name__
+            log.error('get_content_type exception ( %s ): %s ' % (self.url, ex))
+            errno = ex.args[0].reason.errno
+            if errno in self.ERRNO_BLOCK.keys():
+                self.add_url_blacklist(self.url, errno)
+
+            return None
+
+    def valid_url(self):
+        return URL_REGEX.match(self.url)
+
+    def get_error_code(self):
+        if self.status_code < 400:
+            return 0
+        return self.status_code
+
+    def add_url_blacklist(self, url, errno):
+        url_paths = self.get_url_paths(url)
+        url_paths.reverse() # so we deal with closest parent first
+        sql_SELECT = '''
+                SELECT path
+                FROM resource_domain_blacklist
+                WHERE path = :path;
+        '''
+        sql_UPDATE = '''
+                UPDATE resource_domain_blacklist
+                SET count = count +1
+                WHERE path = :path;
+        '''
+        sql_INSERT = '''
+                INSERT INTO resource_domain_blacklist(path, count, errno)
+                VALUES (:path, 1, :errno);
+        '''
+        for path in url_paths:
+            q = model.Session.execute(sql_SELECT, {'path': path})
+            rowcount = q.rowcount
+            if rowcount:
+                model.Session.execute(sql_UPDATE, {'path': path})
+                model.Session.commit()
+                break # only update closest existing parent
+            else:
+                model.Session.execute(sql_INSERT, {
+                        'path': path,
+                        'errno':errno, # todo deal with multiple errno
+                })
+                model.Session.commit()
+
+    def delete_url_blacklist(self, url):
+        url_paths = self.get_url_paths(url)
+        sql_DELETE = '''
+                DELETE FROM resource_domain_blacklist
+                WHERE path = :path;
+        '''
+        for path in url_paths:
+            q = model.Session.execute(sql_DELETE, {'path': path})
+            model.Session.commit()
+
+    @staticmethod
+    def clear_url_blacklist():
+        sql_CLEAR = '''
+                DELETE FROM resource_domain_blacklist;
+        '''
+        q = model.Session.execute(sql_CLEAR)
+        model.Session.commit()
+
+    def check_url_blacklist(self, url):
+        errno = None
+        url_paths = self.get_url_paths(url)
+        sql_CHECK = '''
+                SELECT errno
+                FROM resource_domain_blacklist
+                WHERE path = :path
+                AND count >= :count
+                LIMIT 1;
+        '''
+        for path in url_paths:
+            q = model.Session.execute(sql_CHECK, {
+                    'path': path,
+                    'count': self.BLOCK_THRESHOLD,
+            })
+            if q.rowcount:
+                errno = q.fetchone()[0]
+                break
+
+        return errno
+
+    def get_url_paths(self, url):
+        from urlparse import urlparse
+        url_paths = []
+
+        o = urlparse(url)
+        if not o.scheme and not o.netloc:
+            return url_paths
+
+        current_path = o.scheme + '://' + o.netloc.lower()
+        url_paths.append(current_path)
+        paths = o.path.split('/')
+        for path in paths:
+            if path:
+                current_path = current_path + '/' + path
+                url_paths.append(current_path)
+
+        return url_paths
