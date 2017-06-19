@@ -22,6 +22,7 @@ from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
+from ckan import model
 
 toolkit = p.toolkit
 
@@ -29,6 +30,9 @@ ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
 
+ERRNO_BLOCK = {
+    101: 'Network is unreachable'
+}
 
 def load_config(ckan_ini_filepath):
     import paste.deploy
@@ -376,7 +380,7 @@ def _update_resource(resource_id, queue, log):
     return json.dumps(dict(download_result, **archive_result))
 
 
-def download(context, resource, url_timeout=30,
+def download(context, resource, url_timeout=20,
              max_content_length='default',
              method='GET'):
     '''Given a resource, tries to download it.
@@ -429,30 +433,64 @@ def download(context, resource, url_timeout=30,
     headers = _set_user_agent_string({})
 
     #Check if url is black listed first
-    resource = RemoteResource(url)    
-    is_blacklisted = resource.check_url_blacklist()
+    resource_blacklist = RemoteResource(url)    
+    is_blacklisted = resource_blacklist.check_url_blacklist()
 
     # start the download - just get the headers
     # May raise DownloadException
     if is_blacklisted:
-        raise ChooseNotToDownload(_("Url is blacklisted")
+        raise ChooseNotToDownload(_("Url is blacklisted"))
     
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
-    res = requests_wrapper(log, method_func, url, timeout=url_timeout,
-                           stream=True, headers=headers,
-                           verify=verify_https(),
-                           )
+           # res = requests_wrapper(log, method_func, url, timeout=url_timeout,
+        #                       stream=True, headers=headers,
+         #                      verify=verify_https(),
+          #                     )
+    #try:
+       # res = requests_wrapper(log, method_func, url, timeout=url_timeout,
+        #                       stream=True, headers=headers,
+         #                      verify=verify_https(),
+          #                     )
+    #except Exception as ex:
+	#global ERRNO_BLOCK
+        #errno = ex.args[0].reason.errno
+	#with open("/tmp/python.log", "a") as mylog:
+        #    mylog.write("\n%s\n" % errno)
+        #if errno in ERRNO_BLOCK.keys():
+        #    resource.add_url_blacklist(ex.args[0].reason.errno)
+    try:
+        res = requests_wrapper(log, method_func, url, timeout=url_timeout,
+                               stream=True, headers=headers,
+                               verify=verify_https(),
+                               )
+    except requests.exceptions.Timeout:
+	log.info("URL TIMEOUT")
+        resource_blacklist.add_url_blacklist(101)
+	_save(Status.by_text('Download failure'), "Timeout Error", resource)
+	with open("/tmp/python.log", "a") as mylog:
+            mylog.write("\n%s\n" % resource)
+	with open("/tmp/python.log", "a") as mylog:
+            mylog.write("\n%s\n" % "here")
+        return
+    #except Exception as ex:	
+     #   errno = ex.args
+      #  with open("/tmp/python.log", "a") as mylog:
+       #     mylog.write("\n%s\n" % errno)
+
     url_redirected_to = res.url if url != res.url else None
 
     if context.get('previous') and ('etag' in res.headers):
         if context.get('previous').etag == res.headers['etag']:
             log.info("ETAG matches, not downloading content")
             raise NotChanged("etag suggests content has not changed")
-
+    
     if not res.ok:  # i.e. 404 or something
         raise DownloadError('Server reported status error: %s %s' %
                             (res.status_code, res.reason),
                             url_redirected_to)
+    else:
+        resource_blacklist.delete_url_blacklist()
+
     log.info('GET started successfully. Content headers: %r', res.headers)
 
     # record headers
@@ -486,8 +524,15 @@ def download(context, resource, url_timeout=30,
     # download, we will monitor it doesn't go over the max.
 
     # continue the download - stream the response body
+    #def get_content():
+        #return res.content
+    #instead of getting content, get the first 500 bytes
     def get_content():
-        return res.content
+        for chunk in res.iter_content(chunk_size=500):
+            saved_chunk = chunk
+            break
+        return saved_chunk
+
     log.info('Downloading the body')
     content = requests_wrapper(log, get_content)
 
@@ -498,6 +543,7 @@ def download(context, resource, url_timeout=30,
                             url_redirected_to)
 
     content_length = len(content)
+    
     if content_length > max_content_length:
         raise ChooseNotToDownload(_("Content-length %s exceeds maximum allowed value %s") %
                                   (content_length, max_content_length),
@@ -1084,8 +1130,8 @@ class RemoteResource(object):
             return 0
         return self.status_code
 
-    def add_url_blacklist(self, url, errno):
-        url_paths = self.get_url_paths(url)
+    def add_url_blacklist(self, errno):
+        url_paths = self.get_url_paths(self.url)
         url_paths.reverse() # so we deal with closest parent first
         sql_SELECT = '''
                 SELECT path
@@ -1115,8 +1161,8 @@ class RemoteResource(object):
                 })
                 model.Session.commit()
 
-    def delete_url_blacklist(self, url):
-        url_paths = self.get_url_paths(url)
+    def delete_url_blacklist(self):
+        url_paths = self.get_url_paths(self.url)
         sql_DELETE = '''
                 DELETE FROM resource_domain_blacklist
                 WHERE path = :path;
@@ -1133,9 +1179,9 @@ class RemoteResource(object):
         q = model.Session.execute(sql_CLEAR)
         model.Session.commit()
 
-    def check_url_blacklist(self, url):
+    def check_url_blacklist(self):
         errno = None
-        url_paths = self.get_url_paths(url)
+        url_paths = self.get_url_paths(self.url)
         sql_CHECK = '''
                 SELECT errno
                 FROM resource_domain_blacklist
