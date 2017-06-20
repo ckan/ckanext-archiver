@@ -64,8 +64,8 @@ To install ckanext-archiver:
 
 2. Install the ckanext-archiver and ckanext-report Python packages into your virtual environment::
 
-     pip install -e git+http://github.com/ckan/ckanext-archiver.git#egg=ckanext-archiver
      pip install -e git+http://github.com/datagovuk/ckanext-report.git#egg=ckanext-report
+     pip install -e git+http://github.com/ckan/ckanext-archiver.git#egg=ckanext-archiver
 
 3. Install the archiver dependencies::
 
