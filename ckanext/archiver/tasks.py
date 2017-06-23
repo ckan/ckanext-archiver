@@ -22,6 +22,7 @@ from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
+from ckan import model
 
 toolkit = p.toolkit
 
@@ -29,6 +30,9 @@ ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
 
+ERRNO_BLOCK = {
+    101: 'Network is unreachable'
+}
 
 def load_config(ckan_ini_filepath):
     import paste.deploy
@@ -158,6 +162,9 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
 
 def _update_package(package_id, queue, log):
     from ckan import model
+    import threading, time, Queue
+
+    queuer = Queue.Queue()
 
     get_action = toolkit.get_action
 
@@ -166,8 +173,16 @@ def _update_package(package_id, queue, log):
     package = get_action('package_show')(context_, {'id': package_id})
 
     for resource in package['resources']:
-        resource_id = resource['id']
-        res = _update_resource(resource_id, queue, log)
+	resource_id = resource['id']
+
+	def archive_thread(resource_id, queue, log, queuer):
+            archive_result = _update_resource(resource_id, queue, log)
+            queuer.put(archive_result)
+        archive_t = threading.Thread(target=archive_thread, args=(resource_id, queue, log, queuer))
+        archive_t.start()
+        res = queuer.get()
+
+        #res = _update_resource(resource_id, queue, log)
         if res:
             num_archived += 1
 
@@ -253,7 +268,8 @@ def _update_resource(resource_id, queue, log):
 
     # Download
     try_as_api = False
-    requires_archive = True
+    # Dont need to archive
+    requires_archive = False
 
     url = resource['url']
     if not url.startswith('http'):
@@ -321,6 +337,10 @@ def _update_resource(resource_id, queue, log):
         download_status_id = Status.by_text('URL invalid')
         try_as_api = False
     except DownloadException, e:
+	with open("/tmp/python.log", "a") as mylog:
+            mylog.write("\n%s\n" % e)
+	with open("/tmp/python.log", "a") as mylog:
+            mylog.write("\n%s\n" % resource)
         download_status_id = Status.by_text('Download error')
         try_as_api = True
     except DownloadError, e:
@@ -376,7 +396,7 @@ def _update_resource(resource_id, queue, log):
     return json.dumps(dict(download_result, **archive_result))
 
 
-def download(context, resource, url_timeout=30,
+def download(context, resource, url_timeout=20,
              max_content_length='default',
              method='GET'):
     '''Given a resource, tries to download it.
@@ -429,30 +449,34 @@ def download(context, resource, url_timeout=30,
     headers = _set_user_agent_string({})
 
     #Check if url is black listed first
-    resource = RemoteResource(url)    
-    is_blacklisted = resource.check_url_blacklist()
+    resource_blacklist = RemoteResource(url)    
+    is_blacklisted = resource_blacklist.check_url_blacklist()
+    
+    if is_blacklisted:
+        raise ChooseNotToDownload(_("Url is broken"))
 
     # start the download - just get the headers
     # May raise DownloadException
-    if is_blacklisted:
-        raise ChooseNotToDownload(_("Url is blacklisted")
-    
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
-    res = requests_wrapper(log, method_func, url, timeout=url_timeout,
+    res = requests_wrapper(log, method_func, resource_blacklist, url, timeout=url_timeout,
                            stream=True, headers=headers,
-                           verify=verify_https(),
+                           verify=verify_https() 
                            )
-    url_redirected_to = res.url if url != res.url else None
 
+    url_redirected_to = res.url if url != res.url else None
+    
     if context.get('previous') and ('etag' in res.headers):
         if context.get('previous').etag == res.headers['etag']:
             log.info("ETAG matches, not downloading content")
             raise NotChanged("etag suggests content has not changed")
-
+    
     if not res.ok:  # i.e. 404 or something
         raise DownloadError('Server reported status error: %s %s' %
                             (res.status_code, res.reason),
                             url_redirected_to)
+    else:
+        resource_blacklist.delete_url_blacklist()
+
     log.info('GET started successfully. Content headers: %r', res.headers)
 
     # record headers
@@ -488,15 +512,15 @@ def download(context, resource, url_timeout=30,
     # continue the download - stream the response body
     #def get_content():
         #return res.content
-   #instead of getting content, get the first 1024 bytes
+    #instead of getting content, get the first 500 bytes
     def get_content():
-        for chunk in res.iter_content(chunk_size=1024):
+        for chunk in res.iter_content(chunk_size=500):
             saved_chunk = chunk
             break
         return saved_chunk
 
     log.info('Downloading the body')
-    content = requests_wrapper(log, get_content)
+    content = requests_wrapper(log, get_content, resource_blacklist)
 
     # APIs can return status 200, but contain an error message in the body
     if response_is_an_api_error(content):
@@ -505,6 +529,7 @@ def download(context, resource, url_timeout=30,
                             url_redirected_to)
 
     content_length = len(content)
+    
     if content_length > max_content_length:
         raise ChooseNotToDownload(_("Content-length %s exceeds maximum allowed value %s") %
                                   (content_length, max_content_length),
@@ -543,7 +568,7 @@ def _file_hashnlength(local_path):
     BLOCKSIZE = 65536
     hasher = hashlib.sha1()
     length = 0
-
+    
     with open(local_path, 'rb') as afile:
         buf = afile.read(BLOCKSIZE)
         while len(buf) > 0:
@@ -790,7 +815,7 @@ def save_archival(resource, status_id, reason, url_redirected_to,
     model.repo.commit_and_remove()
 
 
-def requests_wrapper(log, func, *args, **kwargs):
+def requests_wrapper(log, func, resource_blacklist, *args, **kwargs):
     '''
     Run a requests command, catching exceptions and reraising them as
     DownloadException. Status errors, such as 404 or 500 do not cause
@@ -801,6 +826,38 @@ def requests_wrapper(log, func, *args, **kwargs):
         res = requests.get(url, timeout=url_timeout)
     '''
     from requests_ssl import SSLv3Adapter
+
+    #catch FTP error
+    if 'ftp://' in resource_blacklist.url:
+            try:
+                # TODO break it up and code for each type of exceptions
+                from urlparse import urlparse
+                import ftplib
+                o = urlparse(self.url)
+
+                ftp_timeout = 20 # in seconds
+                ftp_server = o.hostname
+                ftp_user = 'anonymous' if not o.username else o.username
+                ftp_pass = 'anonymous@' if not o.username else o.password
+                ftp_port = 21 if not o.port else o.port
+                ftp_filepath = o.path
+
+                ftp = ftplib.FTP()
+                ftp.connect(ftp_server, port=ftp_port, timeout=ftp_timeout)
+                ftp.login(ftp_user, ftp_pass)
+                if ftp_filepath.strip('/'):
+                    assert ftp.nlst(ftp_filepath)
+                resource_blacklist.status_code = 200
+                return {'mimetype': None,
+                        'size': 100,
+                        'hash': None,
+                        'headers': None,
+                        'saved_file': None,
+                        'url_redirected_to': None,
+                        'request_type': 'GET'}
+            except Exception, e:
+                resource_blacklist.status_code = 408
+                raise DownloadException(_('FTP download error'))
     try:
         try:
             response = func(*args, **kwargs)
@@ -815,12 +872,20 @@ def requests_wrapper(log, func, *args, **kwargs):
             response = func(*args, **kwargs)
 
     except requests.exceptions.ConnectionError, e:
+	with open("/tmp/python.log", "a") as mylog:
+            mylog.write("\n%s\n" % e.args[0].reason.errno)
+	resource_blacklist.add_url_blacklist(e.args[0].reason.errno)
         raise DownloadException(_('Connection error: %s') % e)
     except requests.exceptions.HTTPError, e:
         raise DownloadException(_('Invalid HTTP response: %s') % e)
     except requests.exceptions.Timeout, e:
+	with open("/tmp/python.log", "a") as mylog:
+            mylog.write("\nTIMEOUT: %s\n" % e)
+	resource_blacklist.add_url_blacklist(100)
         raise DownloadException(_('Connection timed out after %ss') % kwargs.get('timeout', '?'))
     except requests.exceptions.TooManyRedirects, e:
+	with open("/tmp/python.log", "a") as mylog:
+            mylog.write("\nToo many redirects: %s\n" % e)
         raise DownloadException(_('Too many redirects'))
     except requests.exceptions.RequestException, e:
         raise DownloadException(_('Error downloading: %s') % e)
@@ -999,7 +1064,7 @@ class RemoteResource(object):
     ERRNO_BLOCK = {
         101: 'Network is unreachable',
     }
-    BLOCK_THRESHOLD = 15
+    BLOCK_THRESHOLD = 5 
     def __init__(self, url):
         self.url = url.strip()
         self.status_code = 0
@@ -1091,8 +1156,8 @@ class RemoteResource(object):
             return 0
         return self.status_code
 
-    def add_url_blacklist(self, url, errno):
-        url_paths = self.get_url_paths(url)
+    def add_url_blacklist(self, errno):
+        url_paths = self.get_url_paths(self.url)
         url_paths.reverse() # so we deal with closest parent first
         sql_SELECT = '''
                 SELECT path
@@ -1122,8 +1187,8 @@ class RemoteResource(object):
                 })
                 model.Session.commit()
 
-    def delete_url_blacklist(self, url):
-        url_paths = self.get_url_paths(url)
+    def delete_url_blacklist(self):
+        url_paths = self.get_url_paths(self.url)
         sql_DELETE = '''
                 DELETE FROM resource_domain_blacklist
                 WHERE path = :path;
@@ -1140,9 +1205,9 @@ class RemoteResource(object):
         q = model.Session.execute(sql_CLEAR)
         model.Session.commit()
 
-    def check_url_blacklist(self, url):
+    def check_url_blacklist(self):
         errno = None
-        url_paths = self.get_url_paths(url)
+        url_paths = self.get_url_paths(self.url)
         sql_CHECK = '''
                 SELECT errno
                 FROM resource_domain_blacklist

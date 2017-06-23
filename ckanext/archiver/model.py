@@ -173,6 +173,16 @@ class Archival(Base):
         archival_dict['is_broken_printable'] = broken_enum[self.is_broken]
         return archival_dict
 
+class Blacklist(Base):
+    """
+    Table of urls that are broken
+    """
+    __tablename__ = 'blacklist'
+
+    id = Column(types.UnicodeText, primary_key=True, default=make_uuid)
+    path = Column(types.UnicodeText,  primary_key=True)
+    count = Column(types.Integer(), nullable=False, default=u'')
+    errno = Column(types.Integer(), nullable=False, default=u'')
 
 def aggregate_archivals_for_a_dataset(archivals):
     '''Returns aggregated archival info for a dataset, given the archivals for
