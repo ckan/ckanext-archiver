@@ -175,14 +175,14 @@ def _update_package(package_id, queue, log):
     for resource in package['resources']:
 	resource_id = resource['id']
 
-	#def archive_thread(resource_id, queue, log, queuer):
-            #archive_result = _update_resource(resource_id, queue, log)
-            #queuer.put(archive_result)
-        #archive_t = threading.Thread(target=archive_thread, args=(resource_id, queue, log, queuer))
-        #archive_t.start()
-        #res = queuer.get()
+	def archive_thread(resource_id, queue, log, queuer):
+            archive_result = _update_resource(resource_id, queue, log)
+            queuer.put(archive_result)
+        archive_t = threading.Thread(target=archive_thread, args=(resource_id, queue, log, queuer))
+        archive_t.start()
+        res = queuer.get()
 
-        res = _update_resource(resource_id, queue, log)
+        #res = _update_resource(resource_id, queue, log)
         if res:
             num_archived += 1
 
