@@ -337,10 +337,6 @@ def _update_resource(resource_id, queue, log):
         download_status_id = Status.by_text('URL invalid')
         try_as_api = False
     except DownloadException, e:
-	with open("/tmp/python.log", "a") as mylog:
-            mylog.write("\n%s\n" % e)
-	with open("/tmp/python.log", "a") as mylog:
-            mylog.write("\n%s\n" % resource)
         download_status_id = Status.by_text('Download error')
         try_as_api = True
     except DownloadError, e:
@@ -872,20 +868,14 @@ def requests_wrapper(log, func, resource_blacklist, *args, **kwargs):
             response = func(*args, **kwargs)
 
     except requests.exceptions.ConnectionError, e:
-	with open("/tmp/python.log", "a") as mylog:
-            mylog.write("\n%s\n" % e.args[0].reason.errno)
 	resource_blacklist.add_url_blacklist(e.args[0].reason.errno)
         raise DownloadException(_('Connection error: %s') % e)
     except requests.exceptions.HTTPError, e:
         raise DownloadException(_('Invalid HTTP response: %s') % e)
     except requests.exceptions.Timeout, e:
-	with open("/tmp/python.log", "a") as mylog:
-            mylog.write("\nTIMEOUT: %s\n" % e)
 	resource_blacklist.add_url_blacklist(100)
         raise DownloadException(_('Connection timed out after %ss') % kwargs.get('timeout', '?'))
     except requests.exceptions.TooManyRedirects, e:
-	with open("/tmp/python.log", "a") as mylog:
-            mylog.write("\nToo many redirects: %s\n" % e)
         raise DownloadException(_('Too many redirects'))
     except requests.exceptions.RequestException, e:
         raise DownloadException(_('Error downloading: %s') % e)
