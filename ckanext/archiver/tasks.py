@@ -18,6 +18,7 @@ import urlparse
 from requests.packages import urllib3
 
 from ckan.common import _
+_ = lambda value: value
 from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
@@ -349,7 +350,7 @@ def _update_resource(resource_id, queue, log):
         if os.environ.get('DEBUG'):
             raise
         log.error('Uncaught download failure: %r, %r', e, e.args)
-        _save(Status.by_text('Download failure'), e, resource)
+        #_save(Status.by_text('Download failure'), e, resource)
         return
 
     if not Status.is_ok(download_status_id):
