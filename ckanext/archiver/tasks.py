@@ -270,7 +270,7 @@ def _update_resource(resource_id, queue, log):
     # Download
     try_as_api = False
     # Dont need to archive
-    requires_archive = False
+    requires_archive = True
 
     url = resource['url']
     if not url.startswith('http'):
