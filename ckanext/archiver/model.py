@@ -177,7 +177,7 @@ class Blacklist(Base):
     """
     Table of urls that are broken
     """
-    __tablename__ = 'blacklist'
+    __tablename__ = 'resource_domain_blacklist'
 
     id = Column(types.UnicodeText, primary_key=True, default=make_uuid)
     path = Column(types.UnicodeText,  primary_key=True)
