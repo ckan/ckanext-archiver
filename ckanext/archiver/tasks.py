@@ -350,7 +350,10 @@ def _update_resource(resource_id, queue, log):
         if os.environ.get('DEBUG'):
             raise
         log.error('Uncaught download failure: %r, %r', e, e.args)
-        _save(Status.by_text('Download failure'), e, resource)
+	try:
+            _save(Status.by_text('Download failure'), e, resource)
+	except:
+	    pass
         return
 
     if not Status.is_ok(download_status_id):
