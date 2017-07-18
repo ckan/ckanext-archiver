@@ -6,6 +6,7 @@ import re
 import shutil
 import itertools
 import ckan.plugins as p
+import ckan.model as model
 
 from pylons import config
 try:
@@ -95,7 +96,7 @@ class Archiver(CkanCommand):
         super(Archiver, self).__init__(name)
         self.parser.add_option('-q', '--queue',
                                action='store',
-                               dest='queue',
+                   	       dest='queue',
                                help='Send to a particular queue')
 
     def command(self):
@@ -107,6 +108,7 @@ class Archiver(CkanCommand):
             sys.exit(1)
 
         cmd = self.args[0]
+
         self._load_config()
 
         # Initialise logger after the config is loaded, so it is not disabled.
@@ -243,6 +245,8 @@ class Archiver(CkanCommand):
                     sys.exit(1)
         else:
             # all packages
+	    #First clear blacklist table
+	    RemoteResource.clear_url_blacklist()
             pkgs = model.Session.query(model.Package)\
                         .filter_by(state='active')\
                         .order_by('name').all()
@@ -644,3 +648,12 @@ class Archiver(CkanCommand):
                 model.Session.commit()
                 model.Session.flush()
                 print '..deleted %s' % filepath.decode('utf8')
+
+class RemoteResource(object):
+    @staticmethod
+    def clear_url_blacklist():
+        sql_CLEAR = '''
+                DELETE FROM resource_domain_blacklist;
+        '''
+        q = model.Session.execute(sql_CLEAR)
+        model.Session.commit()
