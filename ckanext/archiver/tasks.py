@@ -163,9 +163,6 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
 
 def _update_package(package_id, queue, log):
     from ckan import model
-    import threading, time, Queue
-
-    queuer = Queue.Queue()
 
     get_action = toolkit.get_action
 
@@ -175,15 +172,7 @@ def _update_package(package_id, queue, log):
 
     for resource in package['resources']:
 	resource_id = resource['id']
-
-	def archive_thread(resource_id, queue, log, queuer):
-            archive_result = _update_resource(resource_id, queue, log)
-            queuer.put(archive_result)
-        archive_t = threading.Thread(target=archive_thread, args=(resource_id, queue, log, queuer))
-        archive_t.start()
-        res = queuer.get()
-
-        #res = _update_resource(resource_id, queue, log)
+        res = _update_resource(resource_id, queue, log)
         if res:
             num_archived += 1
 
