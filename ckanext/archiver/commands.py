@@ -91,6 +91,7 @@ class Archiver(CkanCommand):
     usage = __doc__
     min_args = 0
     max_args = 2
+    update_at_a_time = 1000
 
     def __init__(self, name):
         super(Archiver, self).__init__(name)
@@ -116,6 +117,8 @@ class Archiver(CkanCommand):
 
         if cmd == 'update':
             self.update()
+	if cmd == 'update-max':
+	    self.update_max()
         elif cmd == 'update-test':
             self.update_test()
         elif cmd == 'clean-status':
@@ -172,6 +175,17 @@ class Archiver(CkanCommand):
                 time.sleep(0.05)  # to try to avoid Redis getting overloaded
         self.log.info('Completed queueing')
 
+    def update_max(self):
+	from ckanext.archiver import lib
+        for pkg_or_res, is_pkg, num_resources_for_pkg, pkg_for_res in \
+                self._get_packages_and_resources_in_args(self.update_at_a_time):
+            if is_pkg:
+                package = pkg_or_res
+                self.log.info('Queuing dataset %s (%s resources)',
+                              package.name, num_resources_for_pkg)
+                lib.create_archiver_package_task(package, self.options.queue)
+                time.sleep(0.1)  # to try to avoid Redis getting overloaded
+
     def update_test(self):
         from ckanext.archiver import tasks
         # Prevent it loading config again
@@ -209,9 +223,80 @@ class Archiver(CkanCommand):
                pkg_for_res - package object relating to the given resource
         '''
         from ckan import model
+	import uuid
+
         packages = []
         resources = []
-        if args:
+        more_to_queue = True
+
+        if args == self.update_at_a_time:
+	    sql_CLEAR = '''
+                DELETE FROM archiver_checklist;
+            '''
+            q = model.Session.execute(sql_CLEAR)
+            model.Session.commit()
+
+	    while more_to_queue:
+		packages = []
+		RemoteResource.clear_url_blacklist()
+		sql_UPDATE_MAX = '''
+		    SELECT package.*
+		    FROM package
+		    LEFT JOIN archiver_checklist
+		    ON package.id=archiver_checklist.package_id
+		    WHERE COALESCE(archiver_checklist.is_archived, false) is false
+		    AND package.state='active'
+		    LIMIT :max_num;
+        	'''
+		pkgs = model.Session.execute(sql_UPDATE_MAX, {'max_num': self.update_at_a_time })
+        	packages.extend(pkgs)
+
+        	if not self.options.queue:
+            	    self.options.queue = 'bulk'
+
+		if len(packages) < self.update_at_a_time:
+		    more_to_queue = False
+
+		if packages:
+            	    self.log.info('Datasets to archive: %d', len(packages))
+        	if resources:
+            	    self.log.info('Resources to archive: %d', len(resources))
+        	if not (packages or resources):
+            	    self.log.error('No datasets or resources to process')
+            	    sys.exit(1)
+		
+		sql_SELECT = '''
+                    SELECT archiver_checklist.package_id
+                    FROM archiver_checklist
+                    WHERE package_id = :package_id;
+        	'''
+        	sql_UPDATE = '''
+                    UPDATE archiver_checklist
+                    SET is_archived = True
+                    WHERE package_id = :package_id;
+        	'''
+        	sql_INSERT = '''
+                    INSERT INTO archiver_checklist(id, package_id, is_archived)
+                    VALUES (:id, :package_id, True);
+        	'''
+
+		for package in packages:
+		    q = model.Session.execute(sql_SELECT, {'package_id': package.id})
+		    if q.rowcount:
+			model.Session.execute(sql_UPDATE, {'package_id': package.id})
+                	model.Session.commit()  
+		    else:
+    			new_id =  unicode(uuid.uuid4())
+			model.Session.execute(sql_INSERT, {
+                    	    'package_id': package.id,
+			    'id': new_id
+			})
+                    	model.Session.commit()
+		    yield (package, True, 'unknown', None)
+
+		#time.sleep(10)
+	    return
+	elif args:
             for arg in args:
                 # try arg as a group id/name
                 group = model.Group.get(arg)

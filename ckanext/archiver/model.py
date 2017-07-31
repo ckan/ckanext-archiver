@@ -184,6 +184,16 @@ class Blacklist(Base):
     count = Column(types.Integer(), nullable=False, default=u'')
     errno = Column(types.Integer(), nullable=False, default=u'')
 
+class Archiver_Checklist(Base):
+    """
+    Table of packages that need to be archived
+    """
+    __tablename__ = 'archiver_checklist'
+
+    id = Column(types.UnicodeText, primary_key=True, default=make_uuid)
+    package_id = Column(types.UnicodeText, nullable=False, index=True)
+    is_archived = Column(types.Boolean, nullable=False, default=False)
+
 def aggregate_archivals_for_a_dataset(archivals):
     '''Returns aggregated archival info for a dataset, given the archivals for
     its resources (returned by get_for_package).
