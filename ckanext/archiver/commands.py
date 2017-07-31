@@ -230,15 +230,9 @@ class Archiver(CkanCommand):
         more_to_queue = True
 
         if args == self.update_at_a_time:
-	    sql_CLEAR = '''
-                DELETE FROM archiver_checklist;
-            '''
-            q = model.Session.execute(sql_CLEAR)
-            model.Session.commit()
-
+	    RemoteResource.clear_url_blacklist()
 	    while more_to_queue:
 		packages = []
-		RemoteResource.clear_url_blacklist()
 		sql_UPDATE_MAX = '''
 		    SELECT package.*
 		    FROM package
@@ -295,6 +289,11 @@ class Archiver(CkanCommand):
 		    yield (package, True, 'unknown', None)
 
 		#time.sleep(10)
+	    sql_CLEAR = '''
+                DELETE FROM archiver_checklist;
+            '''
+            q = model.Session.execute(sql_CLEAR)
+            model.Session.commit()
 	    return
 	elif args:
             for arg in args:
