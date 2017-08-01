@@ -234,7 +234,7 @@ class Archiver(CkanCommand):
 	    while more_to_queue:
 		packages = []
 		sql_UPDATE_MAX = '''
-		    SELECT package.id
+		    SELECT package.id, package.name
 		    FROM package
 		    LEFT JOIN archiver_checklist
 		    ON package.id=archiver_checklist.package_id
