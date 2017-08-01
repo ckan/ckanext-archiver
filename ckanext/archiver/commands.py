@@ -230,6 +230,11 @@ class Archiver(CkanCommand):
         more_to_queue = True
 
         if args == self.update_at_a_time:
+	    sql_CLEAR = '''
+                DELETE FROM archiver_checklist;
+            '''
+            q = model.Session.execute(sql_CLEAR)
+            model.Session.commit()
 	    RemoteResource.clear_url_blacklist()
 	    while more_to_queue:
 		packages = []
@@ -238,7 +243,7 @@ class Archiver(CkanCommand):
 		    FROM package
 		    LEFT JOIN archiver_checklist
 		    ON package.id=archiver_checklist.package_id
-		    WHERE COALESCE(archiver_checklist.is_archived, false) is false
+		    WHERE archiver_checklist.package_id IS NULL
 		    AND package.state='active'
 		    LIMIT :max_num;
         	'''
@@ -266,12 +271,11 @@ class Archiver(CkanCommand):
         	'''
         	sql_UPDATE = '''
                     UPDATE archiver_checklist
-                    SET is_archived = True
                     WHERE package_id = :package_id;
         	'''
         	sql_INSERT = '''
-                    INSERT INTO archiver_checklist(id, package_id, is_archived)
-                    VALUES (:id, :package_id, True);
+                    INSERT INTO archiver_checklist(id, package_id)
+                    VALUES (:id, :package_id);
         	'''
 
 		for package in packages:
@@ -289,9 +293,6 @@ class Archiver(CkanCommand):
 		    yield (package, True, 'unknown', None)
 
 		#time.sleep(10)
-	    sql_CLEAR = '''
-                DELETE FROM archiver_checklist;
-            '''
             q = model.Session.execute(sql_CLEAR)
             model.Session.commit()
 	    return
