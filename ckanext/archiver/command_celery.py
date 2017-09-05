@@ -8,6 +8,7 @@ from celery import Celery
 from ckan.lib.cli import CkanCommand
 
 
+
 class CeleryCmd(CkanCommand):
     '''
     Manages the Celery daemons. This is an improved version of CKAN core's
@@ -53,7 +54,11 @@ class CeleryCmd(CkanCommand):
         # Don't need to load the config as the db is generally not needed
         #self._load_config()
         # But we do want to get the filename of the ini
-        self._get_config()
+        try:
+            self._get_config()
+        except AttributeError:
+            from ckan.lib.cli import _get_config
+            _get_config(self.options.config)
 
         # Initialise logger after the config is loaded, so it is not disabled.
         #self.log = logging.getLogger(__name__)
@@ -101,7 +106,7 @@ class CeleryCmd(CkanCommand):
         # reread the ckan ini using ConfigParser so that we can get at the
         # non-pylons sections
         config = ConfigParser.ConfigParser()
-        config.read(self.filename)
+        config.read(self.options.config)
 
         celery_config = dict(
             CELERY_RESULT_SERIALIZER='json',
