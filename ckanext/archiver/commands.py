@@ -97,7 +97,7 @@ class Archiver(CkanCommand):
         super(Archiver, self).__init__(name)
         self.parser.add_option('-q', '--queue',
                                action='store',
-                   	       dest='queue',
+                               dest='queue',
                                help='Send to a particular queue')
 
     def command(self):
@@ -117,8 +117,8 @@ class Archiver(CkanCommand):
 
         if cmd == 'update':
             self.update()
-	if cmd == 'update-max':
-	    self.update_max()
+        if cmd == 'update-max':
+            self.update_max()
         elif cmd == 'update-test':
             self.update_test()
         elif cmd == 'clean-status':
@@ -176,7 +176,7 @@ class Archiver(CkanCommand):
         self.log.info('Completed queueing')
 
     def update_max(self):
-	from ckanext.archiver import lib
+        from ckanext.archiver import lib
         for pkg_or_res, is_pkg, num_resources_for_pkg, pkg_for_res in \
                 self._get_packages_and_resources_in_args(self.update_at_a_time):
             if is_pkg:
@@ -223,80 +223,79 @@ class Archiver(CkanCommand):
                pkg_for_res - package object relating to the given resource
         '''
         from ckan import model
-	import uuid
+        import uuid
 
         packages = []
         resources = []
         more_to_queue = True
 
         if args == self.update_at_a_time:
-	    sql_CLEAR = '''
+            sql_CLEAR = '''
                 DELETE FROM archiver_checklist;
             '''
             q = model.Session.execute(sql_CLEAR)
             model.Session.commit()
-	    RemoteResource.clear_url_blacklist()
-	    while more_to_queue:
-		packages = []
-		sql_UPDATE_MAX = '''
-		    SELECT package.id, package.name
-		    FROM package
-		    LEFT JOIN archiver_checklist
-		    ON package.id=archiver_checklist.package_id
-		    WHERE archiver_checklist.package_id IS NULL
-		    AND package.state='active'
-		    LIMIT :max_num;
-        	'''
-		pkgs = model.Session.execute(sql_UPDATE_MAX, {'max_num': self.update_at_a_time })
-        	packages.extend(pkgs)
+            RemoteResource.clear_url_blacklist()
+            while more_to_queue:
+                packages = []
+                sql_UPDATE_MAX = '''
+                    SELECT package.id, package.name
+                    FROM package
+                    LEFT JOIN archiver_checklist
+                    ON package.id=archiver_checklist.package_id
+                    WHERE archiver_checklist.package_id IS NULL
+                    AND package.state='active'
+                    LIMIT :max_num;
+                '''
+                pkgs = model.Session.execute(sql_UPDATE_MAX, {'max_num': self.update_at_a_time })
+                packages.extend(pkgs)
 
-        	if not self.options.queue:
-            	    self.options.queue = 'bulk'
+                if not self.options.queue:
+                    self.options.queue = 'bulk'
 
-		if len(packages) < self.update_at_a_time:
-		    more_to_queue = False
+                if len(packages) < self.update_at_a_time:
+                    more_to_queue = False
 
-		if packages:
-            	    self.log.info('Datasets to archive: %d', len(packages))
-        	if resources:
-            	    self.log.info('Resources to archive: %d', len(resources))
-        	if not (packages or resources):
-            	    self.log.error('No datasets or resources to process')
-            	    sys.exit(1)
-		
-		sql_SELECT = '''
+                if packages:
+                    self.log.info('Datasets to archive: %d', len(packages))
+                if resources:
+                    self.log.info('Resources to archive: %d', len(resources))
+                if not (packages or resources):
+                    self.log.error('No datasets or resources to process')
+                    sys.exit(1)
+
+                sql_SELECT = '''
                     SELECT archiver_checklist.package_id
                     FROM archiver_checklist
                     WHERE package_id = :package_id;
-        	'''
-        	sql_UPDATE = '''
+                '''
+                sql_UPDATE = '''
                     UPDATE archiver_checklist
                     WHERE package_id = :package_id;
-        	'''
-        	sql_INSERT = '''
+                '''
+                sql_INSERT = '''
                     INSERT INTO archiver_checklist(id, package_id)
                     VALUES (:id, :package_id);
-        	'''
+                '''
 
-		for package in packages:
-		    q = model.Session.execute(sql_SELECT, {'package_id': package.id})
-		    if q.rowcount:
-			model.Session.execute(sql_UPDATE, {'package_id': package.id})
-                	model.Session.commit()  
-		    else:
-    			new_id =  unicode(uuid.uuid4())
-			model.Session.execute(sql_INSERT, {
-                    	    'package_id': package.id,
-			    'id': new_id
-			})
-                    	model.Session.commit()
-		    yield (package, True, 'unknown', None)
+                for package in packages:
+                    q = model.Session.execute(sql_SELECT, {'package_id': package.id})
+                    if q.rowcount:
+                        model.Session.execute(sql_UPDATE, {'package_id': package.id})
+                        model.Session.commit()  
+                    else:
+                        new_id =  unicode(uuid.uuid4())
+                        model.Session.execute(sql_INSERT, {
+                            'package_id': package.id,
+                            'id': new_id
+                        })
+                        model.Session.commit()
+                    yield (package, True, 'unknown', None)
 
-		#time.sleep(10)
             q = model.Session.execute(sql_CLEAR)
             model.Session.commit()
-	    return
-	elif args:
+            return
+        elif args:
             for arg in args:
                 # try arg as a group id/name
                 group = model.Group.get(arg)
@@ -330,8 +329,8 @@ class Archiver(CkanCommand):
                     sys.exit(1)
         else:
             # all packages
-	    #First clear blacklist table
-	    RemoteResource.clear_url_blacklist()
+            #First clear blacklist table
+            RemoteResource.clear_url_blacklist()
             pkgs = model.Session.query(model.Package)\
                         .filter_by(state='active')\
                         .order_by('name').all()

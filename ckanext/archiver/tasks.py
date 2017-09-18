@@ -171,7 +171,7 @@ def _update_package(package_id, queue, log):
     package = get_action('package_show')(context_, {'id': package_id})
 
     for resource in package['resources']:
-	resource_id = resource['id']
+        resource_id = resource['id']
         res = _update_resource(resource_id, queue, log)
         if res:
             num_archived += 1
@@ -181,8 +181,8 @@ def _update_package(package_id, queue, log):
         notify_package(package, queue)
     else:
         #log.info("Not notifying package as 0 items were archived")
-	log.info("Notifying even though 0 items were archived")
-	notify_package(package, queue)
+        log.info("Notifying even though 0 items were archived")
+        notify_package(package, queue)
     # Refresh the index for this dataset, so that it contains the latest
     # archive info. However skip it if there are downstream plugins that will
     # do this anyway, since it is an expensive step to duplicate.
@@ -339,10 +339,10 @@ def _update_resource(resource_id, queue, log):
         if os.environ.get('DEBUG'):
             raise
         log.error('Uncaught download failure: %r, %r', e, e.args)
-	try:
+        try:
             _save(Status.by_text('Download failure'), e, resource)
-	except:
-	    pass
+        except:
+            pass
         return
 
     if not Status.is_ok(download_status_id):
@@ -369,8 +369,8 @@ def _update_resource(resource_id, queue, log):
     # Archival
     log.info('Attempting to archive resource')
     try:
-	#Default archive_result since we are foregoing archiving
-	archive_result = {'cache_filepath': 'None', 'cache_url': 'None'}
+        #Default archive_result since we are foregoing archiving
+        archive_result = {'cache_filepath': 'None', 'cache_url': 'None'}
         #archive_result = archive_resource(context, resource, log, download_result)
     except ArchiveError, e:
         log.error('System error during archival: %r, %r', e, e.args)
@@ -526,8 +526,8 @@ def download(context, resource, url_timeout=20,
 
     log.info('Saving resource')
     try:
-	#We are forgoing saving the resource, writing the response content to disk
-	length, hash, saved_file_path = 3, 'None', 'None'
+        #We are forgoing saving the resource, writing the response content to disk
+        length, hash, saved_file_path = 3, 'None', 'None'
         #length, hash, saved_file_path = _save_resource(resource, res, max_content_length)
     except ChooseNotToDownload, e:
         raise ChooseNotToDownload(str(e), url_redirected_to)
@@ -861,12 +861,12 @@ def requests_wrapper(log, func, resource_blacklist, *args, **kwargs):
             response = func(*args, **kwargs)
 
     except requests.exceptions.ConnectionError, e:
-	resource_blacklist.add_url_blacklist(e.args[0].reason.errno)
+        resource_blacklist.add_url_blacklist(e.args[0].reason.errno)
         raise DownloadException(_('Connection error: %s') % e)
     except requests.exceptions.HTTPError, e:
         raise DownloadException(_('Invalid HTTP response: %s') % e)
     except requests.exceptions.Timeout, e:
-	resource_blacklist.add_url_blacklist(100)
+        resource_blacklist.add_url_blacklist(100)
         raise DownloadException(_('Connection timed out after %ss') % kwargs.get('timeout', '?'))
     except requests.exceptions.TooManyRedirects, e:
         raise DownloadException(_('Too many redirects'))

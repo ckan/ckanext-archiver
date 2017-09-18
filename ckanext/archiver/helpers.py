@@ -19,7 +19,7 @@ def archiver_is_resource_broken_html(resource):
 def archiver_is_resource_broken_line(resource):
     archival = resource.get('archiver')
     if not archival:
-	return tk.literal('<!-- No archival info for this resource -->')
+        return tk.literal('<!-- No archival info for this resource -->')
     extra_vars = {'resource': resource}
     extra_vars.update(archival)
     return tk.literal(
