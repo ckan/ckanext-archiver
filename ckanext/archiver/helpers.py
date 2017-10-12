@@ -16,6 +16,25 @@ def archiver_is_resource_broken_html(resource):
         tk.render('archiver/is_resource_broken.html',
                   extra_vars=extra_vars))
 
+def archiver_is_resource_broken_line(resource):
+    archival = resource.get('archiver')
+    if not archival:
+        return tk.literal('<!-- No archival info for this resource -->')
+    extra_vars = {'resource': resource}
+    extra_vars.update(archival)
+    return tk.literal(
+        tk.render('archiver/is_resource_broken_line.html',
+                  extra_vars=extra_vars))
+
+def archiver_resource_info_table(resource):
+    archival = resource.get('archiver')
+    if not archival:
+        return tk.literal('<!-- No archival info for this resource -->')
+    extra_vars = {'resource': resource}
+    extra_vars.update(archival)
+    return tk.literal(
+        tk.render('archiver/resource_info_table.html',
+                  extra_vars=extra_vars))
 
 def archiver_is_resource_cached_html(resource):
     archival = resource.get('archiver')
