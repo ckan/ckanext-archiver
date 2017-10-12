@@ -18,10 +18,12 @@ import urlparse
 from requests.packages import urllib3
 
 from ckan.common import _
+_ = lambda value: value
 from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
+from ckan import model
 
 toolkit = p.toolkit
 
@@ -29,6 +31,9 @@ ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
 
+ERRNO_BLOCK = {
+    101: 'Network is unreachable'
+}
 
 def load_config(ckan_ini_filepath):
     import paste.deploy
@@ -175,8 +180,9 @@ def _update_package(package_id, queue, log):
         log.info("Notifying package as %d items were archived", num_archived)
         notify_package(package, queue)
     else:
-        log.info("Not notifying package as 0 items were archived")
-
+        #log.info("Not notifying package as 0 items were archived")
+        log.info("Notifying even though 0 items were archived")
+        notify_package(package, queue)
     # Refresh the index for this dataset, so that it contains the latest
     # archive info. However skip it if there are downstream plugins that will
     # do this anyway, since it is an expensive step to duplicate.
@@ -252,6 +258,7 @@ def _update_resource(resource_id, queue, log):
 
     # Download
     try_as_api = False
+    # Dont need to archive
     requires_archive = True
 
     url = resource['url']
@@ -332,7 +339,10 @@ def _update_resource(resource_id, queue, log):
         if os.environ.get('DEBUG'):
             raise
         log.error('Uncaught download failure: %r, %r', e, e.args)
-        _save(Status.by_text('Download failure'), e, resource)
+        try:
+            _save(Status.by_text('Download failure'), e, resource)
+        except:
+            pass
         return
 
     if not Status.is_ok(download_status_id):
@@ -359,7 +369,9 @@ def _update_resource(resource_id, queue, log):
     # Archival
     log.info('Attempting to archive resource')
     try:
-        archive_result = archive_resource(context, resource, log, download_result)
+        #Default archive_result since we are foregoing archiving
+        archive_result = {'cache_filepath': 'None', 'cache_url': 'None'}
+        #archive_result = archive_resource(context, resource, log, download_result)
     except ArchiveError, e:
         log.error('System error during archival: %r, %r', e, e.args)
         _save(Status.by_text('System error during archival'), e, resource, download_result['url_redirected_to'])
@@ -373,7 +385,7 @@ def _update_resource(resource_id, queue, log):
     return json.dumps(dict(download_result, **archive_result))
 
 
-def download(context, resource, url_timeout=30,
+def download(context, resource, url_timeout=20,
              max_content_length='default',
              method='GET'):
     '''Given a resource, tries to download it.
@@ -425,24 +437,35 @@ def download(context, resource, url_timeout=30,
 
     headers = _set_user_agent_string({})
 
+    #Check if url is black listed first
+    resource_blacklist = RemoteResource(url)    
+    is_blacklisted = resource_blacklist.check_url_blacklist()
+    
+    if is_blacklisted:
+        raise ChooseNotToDownload(_("Url is broken"))
+
     # start the download - just get the headers
     # May raise DownloadException
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
-    res = requests_wrapper(log, method_func, url, timeout=url_timeout,
+    res = requests_wrapper(log, method_func, resource_blacklist, url, timeout=url_timeout,
                            stream=True, headers=headers,
-                           verify=verify_https(),
+                           verify=verify_https() 
                            )
-    url_redirected_to = res.url if url != res.url else None
 
+    url_redirected_to = res.url if url != res.url else None
+    
     if context.get('previous') and ('etag' in res.headers):
         if context.get('previous').etag == res.headers['etag']:
             log.info("ETAG matches, not downloading content")
             raise NotChanged("etag suggests content has not changed")
-
+    
     if not res.ok:  # i.e. 404 or something
         raise DownloadError('Server reported status error: %s %s' %
                             (res.status_code, res.reason),
                             url_redirected_to)
+    else:
+        resource_blacklist.delete_url_blacklist()
+
     log.info('GET started successfully. Content headers: %r', res.headers)
 
     # record headers
@@ -476,10 +499,17 @@ def download(context, resource, url_timeout=30,
     # download, we will monitor it doesn't go over the max.
 
     # continue the download - stream the response body
+    #def get_content():
+        #return res.content
+    #instead of getting content, get the first 500 bytes
     def get_content():
-        return res.content
+        for chunk in res.iter_content(chunk_size=500):
+            saved_chunk = chunk
+            break
+        return saved_chunk
+
     log.info('Downloading the body')
-    content = requests_wrapper(log, get_content)
+    content = requests_wrapper(log, get_content, resource_blacklist)
 
     # APIs can return status 200, but contain an error message in the body
     if response_is_an_api_error(content):
@@ -488,6 +518,7 @@ def download(context, resource, url_timeout=30,
                             url_redirected_to)
 
     content_length = len(content)
+    
     if content_length > max_content_length:
         raise ChooseNotToDownload(_("Content-length %s exceeds maximum allowed value %s") %
                                   (content_length, max_content_length),
@@ -495,10 +526,13 @@ def download(context, resource, url_timeout=30,
 
     log.info('Saving resource')
     try:
-        length, hash, saved_file_path = _save_resource(resource, res, max_content_length)
+        #We are forgoing saving the resource, writing the response content to disk
+        length, hash, saved_file_path = 3, 'None', 'None'
+        #length, hash, saved_file_path = _save_resource(resource, res, max_content_length)
     except ChooseNotToDownload, e:
         raise ChooseNotToDownload(str(e), url_redirected_to)
-    log.info('Resource saved. Length: %s File: %s', length, saved_file_path)
+    log.info('Resource was not saved or written to disk')
+   #log.info('Resource saved. Length: %s File: %s', length, saved_file_path)
 
     # zero length (or just one byte) indicates a problem
     if length < 2:
@@ -507,9 +541,9 @@ def download(context, resource, url_timeout=30,
                  length, resource['id'], url)
         raise DownloadError(_("Content-length after streaming was %i") % length,
                             url_redirected_to)
-
-    log.info('Resource downloaded: id=%s url=%r cache_filename=%s length=%s hash=%s',
-             resource['id'], url, saved_file_path, length, hash)
+    log.info('Resource not downloaded')
+    #log.info('Resource downloaded: id=%s url=%r cache_filename=%s length=%s hash=%s',
+  #           resource['id'], url, saved_file_path, length, hash)
 
     return {'mimetype': mimetype,
             'size': length,
@@ -523,7 +557,7 @@ def _file_hashnlength(local_path):
     BLOCKSIZE = 65536
     hasher = hashlib.sha1()
     length = 0
-
+    
     with open(local_path, 'rb') as afile:
         buf = afile.read(BLOCKSIZE)
         while len(buf) > 0:
@@ -770,7 +804,7 @@ def save_archival(resource, status_id, reason, url_redirected_to,
     model.repo.commit_and_remove()
 
 
-def requests_wrapper(log, func, *args, **kwargs):
+def requests_wrapper(log, func, resource_blacklist, *args, **kwargs):
     '''
     Run a requests command, catching exceptions and reraising them as
     DownloadException. Status errors, such as 404 or 500 do not cause
@@ -781,6 +815,38 @@ def requests_wrapper(log, func, *args, **kwargs):
         res = requests.get(url, timeout=url_timeout)
     '''
     from requests_ssl import SSLv3Adapter
+
+    #catch FTP error
+    if 'ftp://' in resource_blacklist.url:
+            try:
+                # TODO break it up and code for each type of exceptions
+                from urlparse import urlparse
+                import ftplib
+                o = urlparse(self.url)
+
+                ftp_timeout = 20 # in seconds
+                ftp_server = o.hostname
+                ftp_user = 'anonymous' if not o.username else o.username
+                ftp_pass = 'anonymous@' if not o.username else o.password
+                ftp_port = 21 if not o.port else o.port
+                ftp_filepath = o.path
+
+                ftp = ftplib.FTP()
+                ftp.connect(ftp_server, port=ftp_port, timeout=ftp_timeout)
+                ftp.login(ftp_user, ftp_pass)
+                if ftp_filepath.strip('/'):
+                    assert ftp.nlst(ftp_filepath)
+                resource_blacklist.status_code = 200
+                return {'mimetype': None,
+                        'size': 100,
+                        'hash': None,
+                        'headers': None,
+                        'saved_file': None,
+                        'url_redirected_to': None,
+                        'request_type': 'GET'}
+            except Exception, e:
+                resource_blacklist.status_code = 408
+                raise DownloadException(_('FTP download error'))
     try:
         try:
             response = func(*args, **kwargs)
@@ -795,10 +861,12 @@ def requests_wrapper(log, func, *args, **kwargs):
             response = func(*args, **kwargs)
 
     except requests.exceptions.ConnectionError, e:
+        resource_blacklist.add_url_blacklist(e.args[0].reason.errno)
         raise DownloadException(_('Connection error: %s') % e)
     except requests.exceptions.HTTPError, e:
         raise DownloadException(_('Invalid HTTP response: %s') % e)
     except requests.exceptions.Timeout, e:
+        resource_blacklist.add_url_blacklist(100)
         raise DownloadException(_('Connection timed out after %ss') % kwargs.get('timeout', '?'))
     except requests.exceptions.TooManyRedirects, e:
         raise DownloadException(_('Too many redirects'))
@@ -967,4 +1035,194 @@ def link_checker(context, data):
             raise LinkHeadRequestError(error_message)
     return json.dumps(dict(headers))
 
+URL_REGEX = re.compile(
+    r'^(?:http|ftp)s?://'   # http:// or https:// or ftp:// or ftps://
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+    r'(?::\d+)?'  # optional port
+    r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
+class RemoteResource(object):
+    # list of errors we want to avoid wasting time on.
+    ERRNO_BLOCK = {
+        101: 'Network is unreachable',
+    }
+    BLOCK_THRESHOLD = 5 
+    def __init__(self, url):
+        self.url = url.strip()
+        self.status_code = 0
+        self.reason = ''
+        self.method = None
+        self.content_type = None
+        self.headers = {'User-Agent': 'Data.Gov Broken Link Checker'}
+
+    def get_content_type(self):
+        if not self.valid_url():
+            self.status_code = 400
+            self.reason = 'Invalid URL'
+            self.content_type = ''
+            return self.content_type
+
+        if 'ftp://' in self.url:
+            try:
+                # TODO break it up and code for each type of exceptions
+                from urlparse import urlparse
+                import ftplib
+                o = urlparse(self.url)
+
+                ftp_timeout = 20 # in seconds
+                ftp_server = o.hostname
+                ftp_user = 'anonymous' if not o.username else o.username
+                ftp_pass = 'anonymous@' if not o.username else o.password
+                ftp_port = 21 if not o.port else o.port
+                ftp_filepath = o.path
+
+                ftp = ftplib.FTP()
+                ftp.connect(ftp_server, port=ftp_port, timeout=ftp_timeout)
+                ftp.login(ftp_user, ftp_pass)
+                if ftp_filepath.strip('/'):
+                    assert ftp.nlst(ftp_filepath)
+                self.status_code = 200
+                return
+            except Exception, e:
+                self.status_code = 408
+                return
+
+        blacklist_errno = self.check_url_blacklist(self.url)
+        if blacklist_errno:
+            self.status_code = 500
+            self.reason = self.ERRNO_BLOCK.get(blacklist_errno)
+            log.error('get_content_type blacklisted ( %s ): %s: %s ' % (
+                    self.url, self.status_code, self.reason))
+            return None
+
+        try:
+            # http://docs.python-requests.org/en/latest/api/
+            method = 'HEAD'
+            r = requests.head(self.url, verify=False, timeout=20.0, allow_redirects=True, headers=self.headers)
+
+            if r.status_code > 399 or r.headers.get('content-type') is None:
+                method = 'GET'
+                r = requests.get(self.url, verify=False, timeout=20.0, allow_redirects=True, stream=True,
+                                 headers=self.headers)
+                r.raw.read(50)
+                if r.status_code > 399 or r.headers.get('content-type') is None:
+                    self.status_code = r.status_code
+                    self.reason = r.reason
+                    self.method = method
+                    self.content_type = None
+                    return self.content_type
+
+            content_type = r.headers.get('content-type')
+            self.content_type = content_type.split(';', 1)[0]
+            self.status_code = r.status_code
+            self.reason = r.reason
+            self.method = method
+            self.delete_url_blacklist(self.url)
+            return self.content_type
+
+        except Exception as ex:
+            self.status_code = 500
+            self.reason = ex.__class__.__name__
+            log.error('get_content_type exception ( %s ): %s ' % (self.url, ex))
+            errno = ex.args[0].reason.errno
+            if errno in self.ERRNO_BLOCK.keys():
+                self.add_url_blacklist(self.url, errno)
+
+            return None
+
+    def valid_url(self):
+        return URL_REGEX.match(self.url)
+
+    def get_error_code(self):
+        if self.status_code < 400:
+            return 0
+        return self.status_code
+
+    def add_url_blacklist(self, errno):
+        url_paths = self.get_url_paths(self.url)
+        url_paths.reverse() # so we deal with closest parent first
+        sql_SELECT = '''
+                SELECT path
+                FROM resource_domain_blacklist
+                WHERE path = :path;
+        '''
+        sql_UPDATE = '''
+                UPDATE resource_domain_blacklist
+                SET count = count +1
+                WHERE path = :path;
+        '''
+        sql_INSERT = '''
+                INSERT INTO resource_domain_blacklist(path, count, errno)
+                VALUES (:path, 1, :errno);
+        '''
+        for path in url_paths:
+            q = model.Session.execute(sql_SELECT, {'path': path})
+            rowcount = q.rowcount
+            if rowcount:
+                model.Session.execute(sql_UPDATE, {'path': path})
+                model.Session.commit()
+                break # only update closest existing parent
+            else:
+                model.Session.execute(sql_INSERT, {
+                        'path': path,
+                        'errno':errno, # todo deal with multiple errno
+                })
+                model.Session.commit()
+
+    def delete_url_blacklist(self):
+        url_paths = self.get_url_paths(self.url)
+        sql_DELETE = '''
+                DELETE FROM resource_domain_blacklist
+                WHERE path = :path;
+        '''
+        for path in url_paths:
+            q = model.Session.execute(sql_DELETE, {'path': path})
+            model.Session.commit()
+
+    @staticmethod
+    def clear_url_blacklist():
+        sql_CLEAR = '''
+                DELETE FROM resource_domain_blacklist;
+        '''
+        q = model.Session.execute(sql_CLEAR)
+        model.Session.commit()
+
+    def check_url_blacklist(self):
+        errno = None
+        url_paths = self.get_url_paths(self.url)
+        sql_CHECK = '''
+                SELECT errno
+                FROM resource_domain_blacklist
+                WHERE path = :path
+                AND count >= :count
+                LIMIT 1;
+        '''
+        for path in url_paths:
+            q = model.Session.execute(sql_CHECK, {
+                    'path': path,
+                    'count': self.BLOCK_THRESHOLD,
+            })
+            if q.rowcount:
+                errno = q.fetchone()[0]
+                break
+
+        return errno
+
+    def get_url_paths(self, url):
+        from urlparse import urlparse
+        url_paths = []
+
+        o = urlparse(url)
+        if not o.scheme and not o.netloc:
+            return url_paths
+
+        current_path = o.scheme + '://' + o.netloc.lower()
+        url_paths.append(current_path)
+        paths = o.path.split('/')
+        for path in paths:
+            if path:
+                current_path = current_path + '/' + path
+                url_paths.append(current_path)
+
+        return url_paths
