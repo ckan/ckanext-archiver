@@ -224,6 +224,8 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         }
     If not successful, returns None.
     """
+    load_config(ckan_ini_filepath)
+
     from ckan import model
     from pylons import config
     from ckan.plugins import toolkit
