@@ -22,6 +22,7 @@ from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
+import ckan.lib.jobs as jobs
 
 import logging
 
@@ -32,6 +33,9 @@ toolkit = p.toolkit
 ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
+
+
+
 
 
 def load_config(ckan_ini_filepath):
@@ -108,6 +112,9 @@ class CkanError(ArchiverError):
 
 
 @celery.task(name="archiver.update_resource")
+def update_resouce_celery(*args, **kwargs):
+    update_resource(*args, **kwargs)
+
 def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     '''
     Archive a resource.
@@ -134,6 +141,9 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
         raise
 
 @celery.task(name="archiver.update_package")
+def update_package_celery(*args, **kwargs):
+    update_package(*args, **kwargs)
+
 def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     '''
     Archive a package.
@@ -902,6 +912,9 @@ def response_is_an_api_error(response_body):
 
 
 @celery.task(name="archiver.clean")
+def clean_celery(*args, **kwargs):
+    clean(*args, **kwargs)
+
 def clean():
     """
     Remove all archived resources.
@@ -910,6 +923,9 @@ def clean():
 
 
 @celery.task(name="archiver.link_checker")
+def link_checker_celery(*args, **kwargs):
+    link_checker(*args, **kwargs)
+
 def link_checker(context, data):
     """
     Check that the resource's url is valid, and accepts a HEAD request.
