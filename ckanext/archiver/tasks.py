@@ -123,7 +123,7 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     # Also put try/except around it is easier to monitor ckan's log rather than
     # celery's task status.
     try:
-        result = _update_resource(resource_id, queue, log)
+        result = _update_resource(ckan_ini_filepath, resource_id, queue, log)
         return result
     except Exception, e:
         if os.environ.get('DEBUG'):
