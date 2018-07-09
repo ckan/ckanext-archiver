@@ -34,9 +34,6 @@ ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 USER_AGENT = 'ckanext-archiver'
 
 
-
-
-
 def load_config(ckan_ini_filepath):
     import paste.deploy
     config_abs_path = os.path.abspath(ckan_ini_filepath)
