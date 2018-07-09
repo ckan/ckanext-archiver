@@ -3,7 +3,6 @@ import logging
 import ckan.plugins as p
 
 from ckan.model.types import make_uuid
-from ckan.lib.celery_app import celery
 
 from ckanext.archiver.tasks import update_package, update_resource
 
