@@ -36,9 +36,7 @@ def create_archiver_resource_task(resource, queue):
     ckan_ini_filepath = os.path.abspath(config['__file__'])
 
     compat_enqueue('archiver.update_resource', queue, [ckan_ini_filepath, resource.id])
-    #celery.send_task('archiver.update_resource',
-    #                 args=[ckan_ini_filepath, resource.id, queue],
-    #                 task_id=task_id, queue=queue)
+
     log.debug('Archival of resource put into celery queue %s: %s/%s url=%r',
               queue, package.name, resource.id, resource.url)
 
@@ -50,9 +48,6 @@ def create_archiver_package_task(package, queue):
 
     compat_enqueue('archiver.update_package', update_package, queue, [ckan_ini_filepath, package.id])
 
-    #celery.send_task('archiver.update_package',
-    #                 args=[ckan_ini_filepath, package.id, queue],
-    #                 task_id=task_id, queue=queue)
     log.debug('Archival of package put into celery queue %s: %s',
               queue, package.name)
 

@@ -22,7 +22,6 @@ from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
-import ckan.lib.jobs as jobs
 
 import logging
 
