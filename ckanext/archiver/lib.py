@@ -5,7 +5,7 @@ import ckan.plugins as p
 from ckan.model.types import make_uuid
 from ckan.lib.celery_app import celery
 
-from ckanext.archiver.tasks import update_package
+from ckanext.archiver.tasks import update_package, update_resource
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def create_archiver_resource_task(resource, queue):
     task_id = '%s/%s/%s' % (package.name, resource.id[:4], make_uuid()[:4])
     ckan_ini_filepath = os.path.abspath(config['__file__'])
 
-    compat_enqueue('archiver.update_resource', queue, [ckan_ini_filepath, resource.id])
+    compat_enqueue('archiver.update_resource', update_resource, queue, [ckan_ini_filepath, resource.id])
 
     log.debug('Archival of resource put into celery queue %s: %s/%s url=%r',
               queue, package.name, resource.id, resource.url)
