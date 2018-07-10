@@ -82,7 +82,7 @@ class TestLinkChecker(BaseCase):
     def teardown_class(cls):
         plugins.unload_all()
         config['ckan.plugins'] = cls._saved_plugins_config
-        if plugins.toolkit.check_ckan_version >= 2.6:
+        if plugins.toolkit.check_ckan_version(min_version='2.6.0'):
             plugins.load_all()
         else:
             plugins.load_all(config)
