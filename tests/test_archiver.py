@@ -73,13 +73,19 @@ class TestLinkChecker(BaseCase):
         plugins.unload_all()
         cls._saved_plugins_config = config.get('ckan.plugins', '')
         config['ckan.plugins'] = 'archiver'
-        plugins.load_all(config)
+        if plugins.toolkit.check_ckan_version(min_version='2.6.0'):
+            plugins.load_all()
+        else:
+            plugins.load_all(config)
 
     @classmethod
     def teardown_class(cls):
         plugins.unload_all()
         config['ckan.plugins'] = cls._saved_plugins_config
-        plugins.load_all(config)
+        if plugins.toolkit.check_ckan_version >= 2.6:
+            plugins.load_all()
+        else:
+            plugins.load_all(config)
 
     def test_file_url(self):
         url = u'file:///home/root/test.txt' # schema not allowed
