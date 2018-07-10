@@ -18,7 +18,6 @@ import urlparse
 from requests.packages import urllib3
 
 from ckan.common import _
-from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
@@ -33,6 +32,25 @@ ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
 
+# CKAN 2.8 does not have celery anymor
+if p.toolkit.check_ckan_version(max_version='2.7.99'):
+    from ckan.lib.celery_app import celery
+
+    @celery.task(name="archiver.update_resource")
+    def update_resouce_celery(*args, **kwargs):
+        update_resource(*args, **kwargs)
+
+    @celery.task(name="archiver.update_package")
+    def update_package_celery(*args, **kwargs):
+        update_package(*args, **kwargs)
+
+    @celery.task(name="archiver.clean")
+    def clean_celery(*args, **kwargs):
+        clean(*args, **kwargs)
+
+    @celery.task(name="archiver.link_checker")
+    def link_checker_celery(*args, **kwargs):
+        link_checker(*args, **kwargs)
 
 def load_config(ckan_ini_filepath):
     import paste.deploy
@@ -92,9 +110,6 @@ class CkanError(ArchiverError):
     pass
 
 
-@celery.task(name="archiver.update_resource")
-def update_resouce_celery(*args, **kwargs):
-    update_resource(*args, **kwargs)
 
 def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     '''
@@ -122,9 +137,7 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
                   e, resource_id)
         raise
 
-@celery.task(name="archiver.update_package")
-def update_package_celery(*args, **kwargs):
-    update_package(*args, **kwargs)
+
 
 def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     '''
@@ -893,21 +906,12 @@ def response_is_an_api_error(response_body):
     if '<ows:ExceptionReport' in response_sample:
         return True
 
-
-@celery.task(name="archiver.clean")
-def clean_celery(*args, **kwargs):
-    clean(*args, **kwargs)
-
 def clean():
     """
     Remove all archived resources.
     """
     log.error("clean task not implemented yet")
 
-
-@celery.task(name="archiver.link_checker")
-def link_checker_celery(*args, **kwargs):
-    link_checker(*args, **kwargs)
 
 def link_checker(context, data):
     """
