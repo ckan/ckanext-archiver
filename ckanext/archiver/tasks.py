@@ -18,7 +18,6 @@ import urlparse
 from requests.packages import urllib3
 
 from ckan.common import _
-from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
@@ -33,6 +32,25 @@ ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
 
+# CKAN 2.8 does not have celery anymor
+if p.toolkit.check_ckan_version(max_version='2.7.99'):
+    from ckan.lib.celery_app import celery
+
+    @celery.task(name="archiver.update_resource")
+    def update_resouce_celery(*args, **kwargs):
+        update_resource(*args, **kwargs)
+
+    @celery.task(name="archiver.update_package")
+    def update_package_celery(*args, **kwargs):
+        update_package(*args, **kwargs)
+
+    @celery.task(name="archiver.clean")
+    def clean_celery(*args, **kwargs):
+        clean(*args, **kwargs)
+
+    @celery.task(name="archiver.link_checker")
+    def link_checker_celery(*args, **kwargs):
+        link_checker(*args, **kwargs)
 
 def load_config(ckan_ini_filepath):
     import paste.deploy
@@ -48,34 +66,19 @@ def load_config(ckan_ini_filepath):
     request_config.host = parsed.netloc + parsed.path
     request_config.protocol = parsed.scheme
 
-    load_translations(conf.get('ckan.locale_default', 'en'))
 
-
-def load_translations(lang):
+def register_translator():
     # Register a translator in this thread so that
     # the _() functions in logic layer can work
-
-    import ckan.lib.i18n
     from paste.registry import Registry
     from pylons import translator
-    from pylons import request
-
+    from ckan.lib.cli import MockTranslator
+    global registry
     registry = Registry()
     registry.prepare()
-
-    class FakePylons:
-            translator = None
-    fakepylons = FakePylons()
-    class FakeRequest:
-        # Stores details of the translator
-        environ = {'pylons.pylons': fakepylons}
-    registry.register(request, FakeRequest())
-
-    # create translator
-    ckan.lib.i18n.set_lang(lang)
-
-    # pull out translator and register it
-    registry.register(translator, fakepylons.translator)
+    global translator_obj
+    translator_obj = MockTranslator()
+    registry.register(translator, translator_obj)
 
 class ArchiverError(Exception):
     pass
@@ -107,12 +110,13 @@ class CkanError(ArchiverError):
     pass
 
 
-@celery.task(name="archiver.update_resource")
+
 def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     '''
     Archive a resource.
     '''
     load_config(ckan_ini_filepath)
+    register_translator()
 
     log.info('Starting update_resource task: res_id=%r queue=%s', resource_id, queue)
 
@@ -123,7 +127,7 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     # Also put try/except around it is easier to monitor ckan's log rather than
     # celery's task status.
     try:
-        result = _update_resource(resource_id, queue, log)
+        result = _update_resource(ckan_ini_filepath, resource_id, queue, log)
         return result
     except Exception, e:
         if os.environ.get('DEBUG'):
@@ -133,12 +137,14 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
                   e, resource_id)
         raise
 
-@celery.task(name="archiver.update_package")
+
+
 def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     '''
     Archive a package.
     '''
     load_config(ckan_ini_filepath)
+    register_translator()
 
     log.info('Starting update_package task: package_id=%r queue=%s',
              package_id, queue)
@@ -262,13 +268,14 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
     if not url.startswith('http'):
         url = config['ckan.site_url'].rstrip('/') + url
 
-    hosted_externally = not url.startswith(config['ckan.site_url'])
+
+    upload = uploader.get_resource_uploader(resource)
+    filepath = upload.get_path(resource['id'])
+
+    hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse.urlparse(filepath).scheme is not ''
     # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
     if resource.get('url_type') == 'upload' and not hosted_externally:
         log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
-
-        upload = uploader.ResourceUpload(resource)
-        filepath = upload.get_path(resource['id'])
 
         try:
             hash, length = _file_hashnlength(filepath)
@@ -900,8 +907,6 @@ def response_is_an_api_error(response_body):
     if '<ows:ExceptionReport' in response_sample:
         return True
 
-
-@celery.task(name="archiver.clean")
 def clean():
     """
     Remove all archived resources.
@@ -909,7 +914,6 @@ def clean():
     log.error("clean task not implemented yet")
 
 
-@celery.task(name="archiver.link_checker")
 def link_checker(context, data):
     """
     Check that the resource's url is valid, and accepts a HEAD request.
