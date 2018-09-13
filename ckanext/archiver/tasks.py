@@ -268,13 +268,14 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
     if not url.startswith('http'):
         url = config['ckan.site_url'].rstrip('/') + url
 
-    hosted_externally = not url.startswith(config['ckan.site_url'])
+
+    upload = uploader.get_resource_uploader(resource)
+    filepath = upload.get_path(resource['id'])
+
+    hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse.urlparse(filepath).scheme is not ''
     # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
     if resource.get('url_type') == 'upload' and not hosted_externally:
         log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
-
-        upload = uploader.ResourceUpload(resource)
-        filepath = upload.get_path(resource['id'])
 
         try:
             hash, length = _file_hashnlength(filepath)
