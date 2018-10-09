@@ -1,4 +1,4 @@
-flask==0.8
+flask==1.0.2
 ProgressBar==2.3
 nose
 mock
