@@ -31,11 +31,8 @@ from ckanext.archiver.tasks import (link_checker,
                                     update_package,
                                     download,
                                     api_request,
-                                    DownloadError,
-                                    ChooseNotToDownload,
                                     LinkCheckerError,
                                     LinkInvalidError,
-                                    CkanError,
                                     response_is_an_api_error
                                     )
 
@@ -44,10 +41,15 @@ from mock_remote_server import MockEchoTestServer, MockWmsServer, MockWfsServer
 
 # enable celery logging for when you run nosetests -s
 log = logging.getLogger('ckanext.archiver.tasks')
+
+
 def get_logger():
     return log
+
+
 update_resource.get_logger = get_logger
 update_package.get_logger = get_logger
+
 
 def with_mock_url(url=''):
     """
@@ -88,7 +90,7 @@ class TestLinkChecker(BaseCase):
             plugins.load_all(config)
 
     def test_file_url(self):
-        url = u'file:///home/root/test.txt' # schema not allowed
+        url = u'file:///home/root/test.txt'  # schema not allowed
         context = json.dumps({})
         data = json.dumps({'url': url})
         assert_raises(LinkInvalidError, link_checker, context, data)
@@ -99,7 +101,8 @@ class TestLinkChecker(BaseCase):
         data = json.dumps({'url': url})
         assert_raises(LinkInvalidError, link_checker, context, data)
 
-    @with_mock_url('+/http://www.homeoffice.gov.uk/publications/science-research-statistics/research-statistics/drugs-alcohol-research/hosb1310/hosb1310-ann2tabs?view=Binary')
+    @with_mock_url('+/http://www.homeoffice.gov.uk/publications/science-research-statistics/research-statistics/'
+                   'drugs-alcohol-research/hosb1310/hosb1310-ann2tabs?view=Binary')
     def test_non_escaped_url(self, url):
         context = json.dumps({})
         data = json.dumps({'url': url})
@@ -107,7 +110,7 @@ class TestLinkChecker(BaseCase):
         assert res
 
     def test_empty_url(self):
-        url =  u''
+        url = u''
         context = json.dumps({})
         data = json.dumps({'url': url})
         assert_raises(LinkCheckerError, link_checker, context, data)
@@ -125,7 +128,7 @@ class TestLinkChecker(BaseCase):
         assert_raises(LinkCheckerError, link_checker, context, data)
 
     @with_mock_url('?status=405')
-    def test_url_with_405(self, url): # 405: method (HEAD) not allowed
+    def test_url_with_405(self, url):  # 405: method (HEAD) not allowed
         context = json.dumps({})
         data = json.dumps({'url': url})
         assert_raises(LinkCheckerError, link_checker, context, data)
@@ -139,7 +142,8 @@ class TestLinkChecker(BaseCase):
         result = json.loads(link_checker(context, data))
         assert result
 
-    # e.g. "http://www.dasa.mod.uk/applications/newWeb/www/index.php?page=48&thiscontent=180&date=2011-05-26&pubType=1&PublishTime=09:30:00&from=home&tabOption=1"
+    # e.g. "http://www.dasa.mod.uk/applications/newWeb/www/index.php?page=48&thiscontent=180&date=2011-05-26
+    # &pubType=1&PublishTime=09:30:00&from=home&tabOption=1"
     @with_mock_url('?time=09:30&status=200')
     def test_colon_in_query_string(self, url):
         # accept, because browsers accept this
@@ -147,7 +151,7 @@ class TestLinkChecker(BaseCase):
         context = json.dumps({})
         data = json.dumps({'url': url})
         result = json.loads(link_checker(context, data))
-        assert result        
+        assert result
 
     @with_mock_url('?status=200 ')
     def test_trailing_whitespace(self, url):
@@ -155,7 +159,7 @@ class TestLinkChecker(BaseCase):
         context = json.dumps({})
         data = json.dumps({'url': url})
         result = json.loads(link_checker(context, data))
-        assert result        
+        assert result
 
     @with_mock_url('?status=200')
     def test_good_url(self, url):
@@ -208,13 +212,13 @@ class TestArchiver(BaseCase):
             raise AssertionError(archival.reason)
 
     def test_file_url(self):
-        res_id = self._test_resource('file:///home/root/test.txt')['id'] # scheme not allowed
+        res_id = self._test_resource('file:///home/root/test.txt')['id']  # scheme not allowed
         result = update_resource(self.config, res_id)
         assert not result, result
         self.assert_archival_error('Invalid url scheme', res_id)
 
     def test_bad_url(self):
-        res_id = self._test_resource('http:host.com')['id'] # no slashes
+        res_id = self._test_resource('http:host.com')['id']  # no slashes
         result = update_resource(self.config, res_id)
         assert not result, result
         self.assert_archival_error('Failed to parse', res_id)
@@ -245,10 +249,10 @@ class TestArchiver(BaseCase):
 
     @with_mock_url('?content-type=application/foo&content=test')
     def test_update_url_with_unknown_content_type(self, url):
-        res_id = self._test_resource(url, format='foo')['id'] # format has no effect
+        res_id = self._test_resource(url, format='foo')['id']  # format has no effect
         result = json.loads(update_resource(self.config, res_id))
         assert result, result
-        assert result['mimetype'] == 'application/foo' # stored from the header
+        assert result['mimetype'] == 'application/foo'  # stored from the header
 
     def test_wms_1_3(self):
         with MockWmsServer(wms_version='1.3').serve() as url:
@@ -338,7 +342,7 @@ class TestArchiver(BaseCase):
         operation, queue, params = testipipe.calls[0]
         assert operation == 'archived'
         assert queue == 'queue1'
-        assert params.get('package_id') == None
+        assert params.get('package_id') is None
         assert params.get('resource_id') == res_id
 
     @with_mock_url('?status=200&content=test&content-type=csv')
@@ -350,7 +354,7 @@ class TestArchiver(BaseCase):
                    'user': 'test',
                    'ignore_auth': True,
                    'session': model.Session}
-        result = get_action('resource_update')(context, data_dict)
+        get_action('resource_update')(context, data_dict)
 
         assert_equal(send_task.called, True)
 
@@ -373,14 +377,14 @@ class TestArchiver(BaseCase):
         operation, queue, params = testipipe.calls[0]
         assert operation == 'archived'
         assert queue == 'queue1'
-        assert params.get('package_id') == None
+        assert params.get('package_id') is None
         assert params.get('resource_id') == pkg['resources'][0]['id']
 
         operation, queue, params = testipipe.calls[1]
         assert operation == 'package-archived'
         assert queue == 'queue1'
         assert params.get('package_id') == pkg['id']
-        assert params.get('resource_id') == None
+        assert params.get('resource_id') is None
 
 
 class TestDownload(BaseCase):
@@ -481,8 +485,11 @@ Unknown service requested.
   </ServiceException>
 </ServiceExceptionReport>'''
         assert_equal(response_is_an_api_error(wms_error_1), True)
-        wms_error_2 = '''<ows:ExceptionReport version='1.1.0' language='en' xmlns:ows='http://www.opengis.net/ows'><ows:Exception exceptionCode='NoApplicableCode'><ows:ExceptionText>Unknown operation name.</ows:ExceptionText></ows:Exception></ows:ExceptionReport>'''
+        wms_error_2 = '''<ows:ExceptionReport version='1.1.0' language='en' xmlns:ows='http://www.opengis.net/ows'>
+        <ows:Exception exceptionCode='NoApplicableCode'><ows:ExceptionText>Unknown operation name.</ows:ExceptionText>
+        </ows:Exception></ows:ExceptionReport>'''
         assert_equal(response_is_an_api_error(wms_error_2), True)
+
 
 def _remove_archived_file(cache_filepath):
     if cache_filepath:
