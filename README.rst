@@ -32,7 +32,7 @@ TODO:
 
 * Show brokenness on the package page (not just the resources)
 * Prettify the html bits
-* Add brokenness to search facets using IFacet 
+* Add brokenness to search facets using IFacet
 
 Operation
 ---------
