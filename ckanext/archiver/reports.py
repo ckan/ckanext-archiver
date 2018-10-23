@@ -10,6 +10,7 @@ import ckan.plugins as p
 
 from ckanext.report import lib
 
+
 def broken_links(organization, include_sub_organizations=False):
     if organization is None:
         return broken_links_index(include_sub_organizations=include_sub_organizations)
@@ -29,13 +30,13 @@ def broken_links_index(include_sub_organizations=False):
         .filter(model.Group.state == 'active').all()
     for org in add_progress_bar(
             orgs, 'Part 1/2' if include_sub_organizations else None):
-        archivals = model.Session.query(Archival)\
-            .filter(Archival.is_broken == True)\
-            .join(model.Package, Archival.package_id == model.Package.id)\
-            .filter(model.Package.owner_org == org.id)\
-            .filter(model.Package.state == 'active')\
-            .join(model.Resource, Archival.resource_id == model.Resource.id)\
-            .filter(model.Resource.state == 'active')
+        archivals = (model.Session.query(Archival)
+            .filter(Archival.is_broken == True) # noqa
+            .join(model.Package, Archival.package_id == model.Package.id)
+            .filter(model.Package.owner_org == org.id)
+            .filter(model.Package.state == 'active')
+            .join(model.Resource, Archival.resource_id == model.Resource.id)
+            .filter(model.Resource.state == 'active'))
         broken_resources = archivals.count()
         broken_datasets = archivals.distinct(model.Package.id).count()
         num_datasets = model.Session.query(model.Package)\
@@ -70,13 +71,13 @@ def broken_links_index(include_sub_organizations=False):
                     # occurs only if there is an organization created since the last loop?
                     continue
                 counts_with_sub_orgs[org_name]['broken_packages'] += \
-                        counts[sub_org_name]['broken_packages']
+                    counts[sub_org_name]['broken_packages']
                 counts_with_sub_orgs[org_name]['broken_resources'] += \
-                        counts[sub_org_name]['broken_resources']
+                    counts[sub_org_name]['broken_resources']
                 counts_with_sub_orgs[org_name]['packages'] += \
-                        counts[sub_org_name]['packages']
+                    counts[sub_org_name]['packages']
                 counts_with_sub_orgs[org_name]['resources'] += \
-                        counts[sub_org_name]['resources']
+                    counts[sub_org_name]['resources']
         results = counts_with_sub_orgs
     else:
         results = counts
@@ -130,7 +131,8 @@ def broken_links_for_organization(organization, include_sub_organizations=False)
     {'organization_name': 'cabinet-office',
      'organization_title:': 'Cabinet Office',
      'table': [
-       {'package_name', 'package_title', 'resource_url', 'status', 'reason', 'last_success', 'first_failure', 'failure_count', 'last_updated'}
+       {'package_name', 'package_title', 'resource_url', 'status', 'reason', 'last_success',
+       'first_failure', 'failure_count', 'last_updated'}
       ...]
 
     '''
@@ -143,19 +145,19 @@ def broken_links_for_organization(organization, include_sub_organizations=False)
     name = org.name
     title = org.title
 
-    archivals = model.Session.query(Archival, model.Package, model.Group).\
-        filter(Archival.is_broken == True).\
-        join(model.Package, Archival.package_id == model.Package.id).\
-        filter(model.Package.state == 'active').\
-        join(model.Resource, Archival.resource_id == model.Resource.id).\
-        filter(model.Resource.state == 'active')
+    archivals = (model.Session.query(Archival, model.Package, model.Group).
+        filter(Archival.is_broken == True). # noqa
+        join(model.Package, Archival.package_id == model.Package.id).
+        filter(model.Package.state == 'active').
+        join(model.Resource, Archival.resource_id == model.Resource.id).
+        filter(model.Resource.state == 'active'))
 
     if not include_sub_organizations:
         org_ids = [org.id]
         archivals = archivals.filter(model.Package.owner_org == org.id)
     else:
         # We want any organization_id that is part of this organization's tree
-        org_ids = ['%s' % organization.id for organization in lib.go_down_tree(org)]
+        org_ids = ['%s' % child_org.id for child_org in lib.go_down_tree(org)]
         archivals = archivals.filter(model.Package.owner_org.in_(org_ids))
 
     archivals = archivals.join(model.Group, model.Package.owner_org == model.Group.id)
@@ -174,9 +176,9 @@ def broken_links_for_organization(organization, include_sub_organizations=False)
             via = "Data4nr"
 
         archived_resource = model.Session.query(model.ResourceRevision)\
-                            .filter_by(id=resource.id)\
-                            .filter_by(revision_timestamp=archival.resource_timestamp)\
-                            .first() or resource
+                                 .filter_by(id=resource.id)\
+                                 .filter_by(revision_timestamp=archival.resource_timestamp)\
+                                 .first() or resource
         row_data = OrderedDict((
             ('dataset_title', pkg.title),
             ('dataset_name', pkg.name),

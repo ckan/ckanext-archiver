@@ -297,6 +297,8 @@ However in production you'd run the priority and bulk queues separately, or else
 
 For production use, we recommend setting up Celery to run with supervisord. `apt-get install supervisor` and use `bin/celery-supervisor.conf` as a configuration template.
 
+If you are running CKAN 2.7 or higher, configure job workers instead http://docs.ckan.org/en/2.8/maintaining/background-tasks.html#using-supervisor
+
 An archival can be triggered by adding a dataset with a resource or updating a resource URL. Alternatively you can run::
 
     paster --plugin=ckanext-archiver archiver update [dataset] --queue=priority -c <path to CKAN config>

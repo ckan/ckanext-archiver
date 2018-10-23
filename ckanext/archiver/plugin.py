@@ -81,7 +81,7 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
 
         # get the package as it was at that previous revision
         context = {'model': model, 'session': model.Session,
-                   #'user': c.user or c.author,
+                   # 'user': c.user or c.author,
                    'ignore_auth': True,
                    'revision_id': previous_revision.id}
         data_dict = {'id': package.id}

@@ -3,6 +3,7 @@ import ssl
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.poolmanager import PoolManager
 
+
 class SSLv3Adapter(HTTPAdapter):
     '''An HTTPS Transport Adapter that uses SSLv3 rather than the default
     SSLv23, for servers which only speak v3.'''

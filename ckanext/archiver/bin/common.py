@@ -1,6 +1,7 @@
 import os
 import ckan.plugins as p
 
+
 def load_config(config_filepath):
     import paste.deploy
     config_abs_path = os.path.abspath(config_filepath)
@@ -51,4 +52,3 @@ def get_resources(state='active', publisher_ref=None, resource_id=None,
     resources = resources.all()
     print '%i resources (%s)' % (len(resources), ' '.join(criteria))
     return resources
-
