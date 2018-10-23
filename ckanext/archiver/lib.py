@@ -2,8 +2,6 @@ import os
 import logging
 import ckan.plugins as p
 
-from ckan.model.types import make_uuid
-
 from ckanext.archiver.tasks import update_package, update_resource
 
 log = logging.getLogger(__name__)
@@ -31,7 +29,6 @@ def create_archiver_resource_task(resource, queue):
         package = resource.resource_group.package
     else:
         package = resource.package
-    task_id = '%s/%s/%s' % (package.name, resource.id[:4], make_uuid()[:4])
     ckan_ini_filepath = os.path.abspath(config['__file__'])
 
     compat_enqueue('archiver.update_resource', update_resource, queue, [ckan_ini_filepath, resource.id])
@@ -42,7 +39,6 @@ def create_archiver_resource_task(resource, queue):
 
 def create_archiver_package_task(package, queue):
     from pylons import config
-    task_id = '%s/%s' % (package.name, make_uuid()[:4])
     ckan_ini_filepath = os.path.abspath(config['__file__'])
 
     compat_enqueue('archiver.update_package', update_package, queue, [ckan_ini_filepath, package.id])
