@@ -74,9 +74,9 @@ def migrate(options):
         fields['mimetype'] = res.mimetype
 
         revisions_with_hash = model.Session.query(model.ResourceRevision)\
-                .filter_by(id=res.id)\
-                .order_by(model.ResourceRevision.revision_timestamp)\
-                .filter(model.ResourceRevision.hash != '').all()
+            .filter_by(id=res.id)\
+            .order_by(model.ResourceRevision.revision_timestamp)\
+            .filter(model.ResourceRevision.hash != '').all()
         if revisions_with_hash:
             # these are not perfect by not far off
             fields['created'] = revisions_with_hash[0].revision_timestamp
@@ -135,6 +135,7 @@ def date_str_to_datetime_or_none(date_str):
     if date_str:
         return date_str_to_datetime(date_str)
     return None
+
 
 if __name__ == '__main__':
     usage = """Tool to migrate archival data from TaskStatus/Resource to Archival table
