@@ -291,48 +291,49 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
     if not url.startswith('http'):
         url = config['ckan.site_url'].rstrip('/') + url
 
-    upload = uploader.get_resource_uploader(resource)
-    filepath = upload.get_path(resource['id'])
+    if resource.get('url_type') == 'upload':
+        upload = uploader.get_resource_uploader(resource)
+        filepath = upload.get_path(resource['id'])
 
-    hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse.urlparse(filepath).scheme is not ''
-    # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
-    if resource.get('url_type') == 'upload' and not hosted_externally:
-        log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
+        hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse.urlparse(filepath).scheme is not ''
+        # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
+        if not hosted_externally:
+            log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
 
-        try:
-            hash, length = _file_hashnlength(filepath)
-        except IOError, e:
-            log.error('Error while accessing local resource %s: %s', filepath, e)
+            try:
+                hash, length = _file_hashnlength(filepath)
+            except IOError, e:
+                log.error('Error while accessing local resource %s: %s', filepath, e)
 
-            download_status_id = Status.by_text('URL request failed')
-            _save(download_status_id, e, resource)
-            return
+                download_status_id = Status.by_text('URL request failed')
+                _save(download_status_id, e, resource)
+                return
 
-        mimetype = None
-        headers = None
-        content_type, content_encoding = mimetypes.guess_type(url)
-        if content_type:
-            mimetype = _clean_content_type(content_type)
-            headers = {'Content-Type': content_type}
+            mimetype = None
+            headers = None
+            content_type, content_encoding = mimetypes.guess_type(url)
+            if content_type:
+                mimetype = _clean_content_type(content_type)
+                headers = {'Content-Type': content_type}
 
-        download_result_mock = {'mimetype': mimetype,
-                                'size': length,
-                                'hash': hash,
-                                'headers': headers,
-                                'saved_file': filepath,
-                                'url_redirected_to': url,
-                                'request_type': 'GET'}
+            download_result_mock = {'mimetype': mimetype,
+                                    'size': length,
+                                    'hash': hash,
+                                    'headers': headers,
+                                    'saved_file': filepath,
+                                    'url_redirected_to': url,
+                                    'request_type': 'GET'}
 
-        archive_result_mock = {'cache_filepath': filepath,
-                               'cache_url': url}
+            archive_result_mock = {'cache_filepath': filepath,
+                                   'cache_url': url}
 
-        # Success
-        _save(Status.by_text('Archived successfully'), '', resource,
-              download_result_mock['url_redirected_to'], download_result_mock, archive_result_mock)
+            # Success
+            _save(Status.by_text('Archived successfully'), '', resource,
+                  download_result_mock['url_redirected_to'], download_result_mock, archive_result_mock)
 
-        # The return value is only used by tests. Serialized for Celery.
-        return json.dumps(dict(download_result_mock, **archive_result_mock))
-        # endif: processing locally uploaded resource
+            # The return value is only used by tests. Serialized for Celery.
+            return json.dumps(dict(download_result_mock, **archive_result_mock))
+            # endif: processing locally uploaded resource
 
     log.info("Attempting to download resource: %s" % resource['url'])
     download_result = None
