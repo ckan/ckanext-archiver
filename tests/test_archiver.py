@@ -5,6 +5,7 @@ import tempfile
 from functools import wraps
 import json
 import mock
+import unittest
 
 from urllib import quote_plus
 from pylons import config
@@ -333,8 +334,7 @@ class TestArchiver(BaseCase):
 
         res_id = self._test_resource(url)['id']
 
-        res = update_resource(self.config, res_id, 'queue1')
-        res.get()
+        update_resource(self.config, res_id, 'queue1')
 
         assert len(testipipe.calls) == 1
 
@@ -346,6 +346,7 @@ class TestArchiver(BaseCase):
 
     @with_mock_url('?status=200&content=test&content-type=csv')
     @mock.patch('ckan.lib.celery_app.celery.send_task')
+    @unittest.skipIf(plugins.toolkit.check_ckan_version(max_version='2.6.99'), '2.7 has deprecated celery')
     def test_package_achived_when_resource_modified(self, url, send_task):
         data_dict = self._test_resource(url)
         data_dict['url'] = 'http://example.com/foo'
@@ -367,8 +368,7 @@ class TestArchiver(BaseCase):
 
         pkg = self._test_package(url)
 
-        res = update_package(self.config, pkg['id'], 'queue1')
-        res.get()
+        update_package(self.config, pkg['id'], 'queue1')
 
         assert len(testipipe.calls) == 2, len(testipipe.calls)
 
