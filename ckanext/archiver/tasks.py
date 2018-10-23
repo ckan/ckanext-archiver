@@ -51,6 +51,7 @@ if p.toolkit.check_ckan_version(max_version='2.6.99'):
     def link_checker_celery(*args, **kwargs):
         link_checker(*args, **kwargs)
 
+
 def load_config(ckan_ini_filepath):
     import paste.deploy
     config_abs_path = os.path.abspath(ckan_ini_filepath)
@@ -134,7 +135,6 @@ class CkanError(ArchiverError):
     pass
 
 
-
 def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     '''
     Archive a resource.
@@ -162,8 +162,6 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
         raise
 
 
-
-@celery.task(name="archiver.update_package")
 def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     '''
     Archive a package.
@@ -933,6 +931,7 @@ def response_is_an_api_error(response_body):
     # </ows:ExceptionText></ows:Exception></ows:ExceptionReport>
     if '<ows:ExceptionReport' in response_sample:
         return True
+
 
 def clean():
     """
