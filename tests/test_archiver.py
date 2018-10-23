@@ -333,8 +333,7 @@ class TestArchiver(BaseCase):
 
         res_id = self._test_resource(url)['id']
 
-        # celery.send_task doesn't respect CELERY_ALWAYS_EAGER
-        res = update_resource.apply_async(args=[self.config, res_id, 'queue1'])
+        res = update_resource(self.config, res_id, 'queue1')
         res.get()
 
         assert len(testipipe.calls) == 1
@@ -368,8 +367,7 @@ class TestArchiver(BaseCase):
 
         pkg = self._test_package(url)
 
-        # celery.send_task doesn't respect CELERY_ALWAYS_EAGER
-        res = update_package.apply_async(args=[self.config, pkg['id'], 'queue1'])
+        res = update_package(self.config, pkg['id'], 'queue1')
         res.get()
 
         assert len(testipipe.calls) == 2, len(testipipe.calls)
