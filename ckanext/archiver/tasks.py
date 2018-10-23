@@ -291,7 +291,6 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
     if not url.startswith('http'):
         url = config['ckan.site_url'].rstrip('/') + url
 
-
     upload = uploader.get_resource_uploader(resource)
     filepath = upload.get_path(resource['id'])
 
