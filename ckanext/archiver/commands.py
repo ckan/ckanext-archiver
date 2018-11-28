@@ -263,7 +263,7 @@ class Archiver(CkanCommand):
             if p.toolkit.check_ckan_version(max_version='2.2.99'):
                 # earlier CKANs had ResourceGroup
                 pkg_resources = \
-                    [res for res in
+                    [resource for resource in
                         itertools.chain.from_iterable(
                             (rg.resources_all
                              for rg in package.resource_groups_all)
@@ -271,8 +271,8 @@ class Archiver(CkanCommand):
                      if res.state == 'active']
             else:
                 pkg_resources = \
-                    [res for res in package.resources_all
-                     if res.state == 'active']
+                    [resource for resource in package.resources_all
+                     if resource.state == 'active']
             yield (package, True, len(pkg_resources), None)
 
         for resource in resources:
@@ -290,7 +290,7 @@ class Archiver(CkanCommand):
         print 'Resources: %i total' % r_q.count()
         a_q = model.Session.query(Archival)
         print 'Archived resources: %i total' % a_q.count()
-        num_with_cache_url = a_q.filter(Archival.cache_url!='').count()
+        num_with_cache_url = a_q.filter(Archival.cache_url != '').count()
         print '                    %i with cache_url' % num_with_cache_url
         last_updated_res = a_q.order_by(Archival.updated.desc()).first()
         print 'Latest archival: %s' % (last_updated_res.updated.strftime('%Y-%m-%d %H:%M') if last_updated_res else '(no)')
@@ -421,7 +421,7 @@ class Archiver(CkanCommand):
                                 self.log.info("Unlinked {0}".format(root))
                                 writer.writerow([m.groups(0)[0], archived_path, "Resource not found, file deleted"])
                             except Exception, e:
-                                self.log.error("Failed to unlink {0}: {1}".format(archived_path,e))
+                                self.log.error("Failed to unlink {0}: {1}".format(archived_path, e))
                         else:
                             writer.writerow([m.groups(0)[0], archived_path, "Resource not found"])
 
@@ -463,14 +463,14 @@ class Archiver(CkanCommand):
         q = "select column_name from INFORMATION_SCHEMA.COLUMNS where table_name = 'archival';"
         current_cols = list([m[0] for m in model.Session.execute(q)])
         for k, v in MIGRATIONS_ADD.iteritems():
-            if not k in current_cols:
+            if k not in current_cols:
                 self.log.info(u"Adding column '{0}'".format(k))
                 self.log.info(u"Executing '{0}'".format(v))
                 model.Session.execute(v)
                 model.Session.commit()
 
         for k, v in MIGRATIONS_MODIFY.iteritems():
-            if  k in current_cols:
+            if k in current_cols:
                 self.log.info(u"Removing column '{0}'".format(k))
                 self.log.info(u"Executing '{0}'".format(v))
                 model.Session.execute(v)
@@ -490,7 +490,7 @@ class Archiver(CkanCommand):
         old_dir_regex = re.compile(r'(.*)/([a-f0-9\-]+)/([^/]*)$')
         new_dir_regex = re.compile(r'(.*)/[a-f0-9]{2}/[a-f0-9\-]{36}/[^/]*$')
         for resource in model.Session.query(model.Resource).\
-            filter(model.Resource.state != model.State.DELETED):
+                filter(model.Resource.state != model.State.DELETED):
             if not resource.cache_url or resource.cache_url == 'None':
                 continue
             if new_dir_regex.match(resource.cache_url):
@@ -513,7 +513,7 @@ class Archiver(CkanCommand):
 
             if package and package.state == model.State.DELETED:
                 print 'Package is deleted'
-                continue       
+                continue
 
             if url_base != site_url_base:
                 print 'ERROR Base URL is incorrect: %r != %r' % (url_base, site_url_base)
@@ -584,16 +584,16 @@ class Archiver(CkanCommand):
             count = q.count()
             counts.append(count)
             total_size = model.Session.query(func.sum(Archival.size)) \
-                     .filter(Archival.size > previous_bin[0]) \
-                     .filter(Archival.size <= size_bin[0]) \
-                     .filter(Archival.cache_filepath != '') \
-                     .join(model.Resource,
-                           Archival.resource_id == model.Resource.id) \
-                     .filter(model.Resource.state != 'deleted') \
-                     .join(model.Package,
-                           Archival.package_id == model.Package.id) \
-                     .filter(model.Package.state != 'deleted') \
-                     .all()[0][0]
+                .filter(Archival.size > previous_bin[0]) \
+                .filter(Archival.size <= size_bin[0]) \
+                .filter(Archival.cache_filepath != '') \
+                .join(model.Resource,
+                      Archival.resource_id == model.Resource.id) \
+                .filter(model.Resource.state != 'deleted') \
+                .join(model.Package,
+                      Archival.package_id == model.Package.id) \
+                .filter(model.Package.state != 'deleted') \
+                .all()[0][0]
             total_size = int(total_size or 0)
             total_sizes.append(total_size)
             print '{:>15}{:>10,}{:>20,}'.format(size_bin[1], count, total_size)
@@ -609,9 +609,9 @@ class Archiver(CkanCommand):
             .filter(Archival.size > max_size) \
             .filter(Archival.cache_filepath != '') \
             .all()
-        total_size = int(model.Session.query(func.sum(Archival.size)) \
-            .filter(Archival.size > max_size) \
-            .all()[0][0] or 0)
+        total_size = int(model.Session.query(func.sum(Archival.size))
+                         .filter(Archival.size > max_size)
+                         .all()[0][0] or 0)
         print '{} archivals above the {:,} threshold with total size {:,}'.format(
             len(archivals), max_size, total_size)
         raw_input('Press Enter to DELETE them')

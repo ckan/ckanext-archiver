@@ -10,6 +10,7 @@ import urllib2
 import socket
 import os
 
+
 class MockHTTPServer(object):
     """
     Mock HTTP server that can take the place of a remote server for testing
@@ -87,14 +88,17 @@ class MockHTTPServer(object):
         except TypeError:
             return var
 
+
 class MockEchoTestServer(MockHTTPServer):
     """
-    WSGI application that echos back the status, headers and 
+    WSGI application that echos back the status, headers and
     content passed via the URL, eg:
 
         a 500 error response: 'http://localhost/?status=500'
 
-        a 200 OK response, returning the function's docstring: 'http://localhost/?status=200;content-type=text/plain;content_var=ckan.tests.lib.test_package_search:test_wsgi_app.__doc__'
+        a 200 OK response, returning the function's docstring:
+        'http://localhost/?status=200;content-type=text/plain;content_var
+        =ckan.tests.lib.test_package_search:test_wsgi_app.__doc__'
 
     To specify content, use:
 
@@ -102,21 +106,20 @@ class MockEchoTestServer(MockHTTPServer):
         content_var=package.module:variable
     """
 
-
     def __call__(self, environ, start_response):
 
         from httplib import responses
         from webob import Request
         request = Request(environ)
         status = int(request.str_params.get('status', '200'))
-        ## if 'redirect' in redirect.str_params:
-        ##     params = dict([(key, value) for param in request.str_params \
-        ##                    if key != 'redirect'])
-        ##     redirect_status = int(request.str_params['redirect'])
-        ##     status = int(request.str_params.get('status', '200'))
-        ##     resp = make_response(render_template('error.html'), redirect_status)
-        ##     resp.headers['Location'] = url_for(request.path, params)
-        ##     return resp
+        # if 'redirect' in redirect.str_params:
+        #     params = dict([(key, value) for param in request.str_params \
+        #                    if key != 'redirect'])
+        #     redirect_status = int(request.str_params['redirect'])
+        #     status = int(request.str_params.get('status', '200'))
+        #     resp = make_response(render_template('error.html'), redirect_status)
+        #     resp.headers['Location'] = url_for(request.path, params)
+        #     return resp
         if 'content_var' in request.str_params:
             content = request.str_params.get('content_var')
             content = self.get_content(content)
@@ -125,7 +128,7 @@ class MockEchoTestServer(MockHTTPServer):
         else:
             content = request.str_params.get('content', '')
         if 'method' in request.str_params \
-               and request.method.lower() != request.str_params['method'].lower():
+                and request.method.lower() != request.str_params['method'].lower():
             content = ''
             status = 405
 
@@ -140,13 +143,14 @@ class MockEchoTestServer(MockHTTPServer):
         if 'length' in request.str_params:
             cl = request.str_params.get('length')
             headers += [('Content-Length', cl)]
-        elif content and not 'no-content-length' in request.str_params:
+        elif content and 'no-content-length' not in request.str_params:
             headers += [('Content-Length', str(len(content)))]
         start_response(
             '%d %s' % (status, responses[status]),
             headers
         )
         return [content]
+
 
 class MockTimeoutTestServer(MockHTTPServer):
     """
@@ -163,11 +167,13 @@ class MockTimeoutTestServer(MockHTTPServer):
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return ['xyz']
 
+
 def get_file_content(data_filename):
     filepath = os.path.join(os.path.dirname(__file__), 'data', data_filename)
     assert os.path.exists(filepath), filepath
     with open(filepath, 'rb') as f:
         return f.read()
+
 
 class MockWmsServer(MockHTTPServer):
     """Acts like an OGC WMS server (well, one basic call)
@@ -181,7 +187,7 @@ class MockWmsServer(MockHTTPServer):
         from webob import Request
         request = Request(environ)
         status = int(request.str_params.get('status', '200'))
-        headers = {'Content-Type': 'text/plain'} 
+        headers = {'Content-Type': 'text/plain'}
         # e.g. params ?service=WMS&request=GetCapabilities&version=1.1.1
         if request.str_params.get('service') != 'WMS':
             status = 200
@@ -204,6 +210,7 @@ class MockWmsServer(MockHTTPServer):
             headers.items()
         )
         return [content]
+
 
 class MockWfsServer(MockHTTPServer):
     """Acts like an OGC WFS server (well, one basic call)
@@ -233,4 +240,7 @@ class MockWfsServer(MockHTTPServer):
         )
         return [content]
 
-ERROR_WRONG_SERVICE = "<ows:ExceptionReport version='1.1.0' language='en' xmlns:ows='http://www.opengis.net/ows'><ows:Exception exceptionCode='NoApplicableCode'><ows:ExceptionText>Wrong service type.</ows:ExceptionText></ows:Exception></ows:ExceptionReport>"
+
+ERROR_WRONG_SERVICE = "<ows:ExceptionReport version='1.1.0' language='en'" \
+                      " xmlns:ows='http://www.opengis.net/ows'><ows:Exception exceptionCode='NoApplicableCode'>" \
+                      "<ows:ExceptionText>Wrong service type.</ows:ExceptionText></ows:Exception></ows:ExceptionReport>"
