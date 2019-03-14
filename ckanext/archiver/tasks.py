@@ -295,7 +295,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         upload = uploader.get_resource_uploader(resource)
         filepath = upload.get_path(resource['id'])
 
-        hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse.urlparse(filepath).scheme is not ''
+        hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse.urlparse(filepath).scheme != ''
         # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
         if not hosted_externally:
             log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
@@ -496,14 +496,14 @@ def download(context, resource, url_timeout=30,
                     pass
     if isinstance(content_length, int) and \
        int(content_length) >= max_content_length:
-            # record fact that resource is too large to archive
-            log.warning('Resource too large to download: %s > max (%s). '
-                        'Resource: %s %r', content_length,
-                        max_content_length, resource['id'], url)
-            raise ChooseNotToDownload(_('Content-length %s exceeds maximum '
-                                      'allowed value %s') %
-                                      (content_length, max_content_length),
-                                      url_redirected_to)
+        # record fact that resource is too large to archive
+        log.warning('Resource too large to download: %s > max (%s). '
+                    'Resource: %s %r', content_length,
+                    max_content_length, resource['id'], url)
+        raise ChooseNotToDownload(_('Content-length %s exceeds maximum '
+                                  'allowed value %s') %
+                                  (content_length, max_content_length),
+                                  url_redirected_to)
     # content_length in the headers is useful but can be unreliable, so when we
     # download, we will monitor it doesn't go over the max.
 
