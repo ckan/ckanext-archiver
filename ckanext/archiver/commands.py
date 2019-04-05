@@ -6,6 +6,7 @@ import re
 import shutil
 import itertools
 import ckan.plugins as p
+from datetime import datetime, timedelta
 
 from pylons import config
 try:
@@ -148,6 +149,8 @@ class Archiver(CkanCommand):
             self.size_report()
         elif cmd == 'delete-files-larger-than-max':
             self.delete_files_larger_than_max_content_length()
+        elif cmd == 'send_broken_link_notification':
+            self.send_broken_link_notification_email()
         else:
             self.log.error('Command %s not recognized' % (cmd,))
 
@@ -644,3 +647,52 @@ class Archiver(CkanCommand):
                 model.Session.commit()
                 model.Session.flush()
                 print '..deleted %s' % filepath.decode('utf8')
+
+    def send_broken_link_notification_email(self):
+        from ckan import model
+        from ckanext.archiver.model import Archival, Status
+
+        resources_with_broken = (model.Session.query(Archival, model.Package, model.Resource)
+            .filter(Archival.is_broken == True) # noqa
+            .join(model.Package, Archival.package_id == model.Package.id)
+            .filter(model.Package.state == 'active')
+            .join(model.Resource, Archival.resource_id == model.Resource.id)
+            .filter(model.Resource.state == 'active'))
+
+        grouped_by_maintainer = {}
+        for resource in resources_with_broken.all():
+            if resource[0].first_failure < datetime.now() - timedelta(days=4):
+                # TODO: here we should check if it is 403 error
+                if Status.is_status_broken(resource[0].status_id):
+                    maintainer = resource[1].maintainer
+                    if maintainer not in grouped_by_maintainer:
+                        grouped_by_maintainer[maintainer] = {"email": resource[1].maintainer_email, "broken": []}
+                    grouped_by_maintainer[maintainer]['broken'].append({
+                        "package_id": resource[0].package_id,
+                        "resource_id": resource[0].resource_id,
+                        "status_id": resource[0].status_id,
+                        "first_failure": resource[0].first_failure,
+                        "failure_count": resource[0].failure_count,
+                        "broken_url": resource[2].url,
+                    })
+
+        def create_email_body(broken_items):
+            body = (
+                "You have broken links in your datasets :) \n"
+                "Here are a list of resources with broken links: \n"
+            )
+            for item in broken_items:
+                body += "package: %s || resource: %s || broken url: %s \n" % (
+                    item["package_id"],
+                    item["resource_id"],
+                    item["broken_url"],
+                )
+            return body
+
+        for maintainer_name, maintainer_details in grouped_by_maintainer.iteritems():
+            print '%s - %s' % (maintainer_name, maintainer_details["email"])
+            body = create_email_body(maintainer_details["broken"])
+            print body
+            # send email
+
+        print 'All messages sent'
