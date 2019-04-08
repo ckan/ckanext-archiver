@@ -45,6 +45,7 @@ class Status:
             21: 'Chose not to download',
             22: 'Download failure',
             23: 'System error during archival',
+            24: 'Forbidden error',
         }
         self._by_id = dict(not_broken, **broken)
         self._by_id.update(not_sure)

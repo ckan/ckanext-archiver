@@ -135,6 +135,10 @@ class CkanError(ArchiverError):
     pass
 
 
+class ForbiddenError(ArchiverError):
+    pass
+
+
 def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     '''
     Archive a resource.
@@ -356,10 +360,14 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         download_status_id = Status.by_text('Download error')
         try_as_api = True
     except DownloadError, e:
+        log.info('ErrorERRORRERERROROROROROOROR: %s' % e)
         download_status_id = Status.by_text('Download error')
         try_as_api = True
     except ChooseNotToDownload, e:
         download_status_id = Status.by_text('Chose not to download')
+        try_as_api = False
+    except ForbiddenError, e:
+        download_status_id = Status.by_text('Forbidden error')
         try_as_api = False
     except Exception, e:
         if os.environ.get('DEBUG'):
@@ -369,6 +377,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         return
 
     if not Status.is_ok(download_status_id):
+        log.info('DOWNLOAD STATUS ID: %s' % download_status_id)
         log.info('GET error: %s - %r, %r "%s"',
                  Status.by_id(download_status_id), e, e.args,
                  resource.get('url'))
@@ -472,9 +481,15 @@ def download(context, resource, url_timeout=30,
             raise NotChanged("etag suggests content has not changed")
 
     if not res.ok:  # i.e. 404 or something
-        raise DownloadError('Server reported status error: %s %s' %
-                            (res.status_code, res.reason),
-                            url_redirected_to)
+        if res.status_code == 403:
+            # this suggests that you need extra permission to download the resource
+            raise ForbiddenError('Forbidden. Server reported status error: %s %s' %
+                                 (res.status_code, res.reason),
+                                 url_redirected_to)
+        else:
+            raise DownloadError('Server reported status error: %s %s' %
+                                (res.status_code, res.reason),
+                                url_redirected_to)
     log.info('GET started successfully. Content headers: %r', res.headers)
 
     # record headers

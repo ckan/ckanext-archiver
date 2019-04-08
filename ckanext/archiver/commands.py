@@ -84,6 +84,9 @@ class Archiver(CkanCommand):
            - For when you reduce the ckanext-archiver.max_content_length and
              want to delete archived files that are now above the threshold,
              and stop referring to these files in the Archival table of the db.
+
+        paster archiver send_broken_link_notification
+            - Sends an email notification to datasets maintainers about broken links in their resources
     '''
     # TODO
     #    paster archiver clean-files
@@ -659,7 +662,6 @@ class Archiver(CkanCommand):
 
         resources_with_broken = (model.Session.query(Archival, model.Package, model.Resource)
             .filter(Archival.is_broken == True) # noqa
-            .filter(Archival.first_failure < todayMinus4)
             .join(model.Package, Archival.package_id == model.Package.id)
             .filter(model.Package.state == 'active')
             .join(model.Resource, Archival.resource_id == model.Resource.id)
@@ -671,6 +673,7 @@ class Archiver(CkanCommand):
         for resource in resources_with_broken.all():
             # TODO: here we should check if it is 403 error
             # Currently we check if it is broken
+            print resource[2].url
             if Status.is_status_broken(resource[0].status_id):
                 maintainer = resource[1].maintainer
 
