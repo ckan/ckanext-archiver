@@ -666,13 +666,17 @@ class Archiver(CkanCommand):
             .filter(model.Resource.state == 'active'))
 
         grouped_by_maintainer = {}
+        # Group resources together by maintainer
+        # So we can send only one message to the maintainer containing all their broken resources
         for resource in resources_with_broken.all():
             # TODO: here we should check if it is 403 error
             # Currently we check if it is broken
             if Status.is_status_broken(resource[0].status_id):
                 maintainer = resource[1].maintainer
+
                 if maintainer not in grouped_by_maintainer:
                     grouped_by_maintainer[maintainer] = {"email": resource[1].maintainer_email, "broken": []}
+
                 grouped_by_maintainer[maintainer]['broken'].append({
                     "package_id": resource[0].package_id,
                     "package_title": resource[1].title,
@@ -683,8 +687,8 @@ class Archiver(CkanCommand):
                     "broken_url": resource[2].url,
                 })
 
+        # Create email to each maintainer and send them
         for maintainer_name, maintainer_details in grouped_by_maintainer.iteritems():
-            # create email and send
             subject = email_template.subject.format(amount=len(maintainer_details["broken"]))
             body = email_template.message(maintainer_details["broken"])
             mail_recipient(maintainer_name, maintainer_details["email"], subject, body)
