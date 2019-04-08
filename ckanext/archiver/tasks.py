@@ -360,7 +360,6 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         download_status_id = Status.by_text('Download error')
         try_as_api = True
     except DownloadError, e:
-        log.info('ErrorERRORRERERROROROROROOROR: %s' % e)
         download_status_id = Status.by_text('Download error')
         try_as_api = True
     except ChooseNotToDownload, e:
@@ -377,7 +376,6 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         return
 
     if not Status.is_ok(download_status_id):
-        log.info('DOWNLOAD STATUS ID: %s' % download_status_id)
         log.info('GET error: %s - %r, %r "%s"',
                  Status.by_id(download_status_id), e, e.args,
                  resource.get('url'))
