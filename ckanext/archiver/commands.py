@@ -16,6 +16,8 @@ except ImportError:
 from sqlalchemy.sql import func
 
 from ckan.lib.cli import CkanCommand
+from ckan.lib.mailer import mail_recipient
+import email_templates.broken_links_notification as email_template
 
 REQUESTS_HEADER = {'content-type': 'application/json'}
 
@@ -652,8 +654,12 @@ class Archiver(CkanCommand):
         from ckan import model
         from ckanext.archiver.model import Archival, Status
 
+        # send email to datasets which have had broken links for more than 3 days
+        todayMinus4 = datetime.now() - timedelta(days=4)
+
         resources_with_broken = (model.Session.query(Archival, model.Package, model.Resource)
             .filter(Archival.is_broken == True) # noqa
+            .filter(Archival.first_failure < todayMinus4)
             .join(model.Package, Archival.package_id == model.Package.id)
             .filter(model.Package.state == 'active')
             .join(model.Resource, Archival.resource_id == model.Resource.id)
@@ -661,38 +667,26 @@ class Archiver(CkanCommand):
 
         grouped_by_maintainer = {}
         for resource in resources_with_broken.all():
-            if resource[0].first_failure < datetime.now() - timedelta(days=4):
-                # TODO: here we should check if it is 403 error
-                if Status.is_status_broken(resource[0].status_id):
-                    maintainer = resource[1].maintainer
-                    if maintainer not in grouped_by_maintainer:
-                        grouped_by_maintainer[maintainer] = {"email": resource[1].maintainer_email, "broken": []}
-                    grouped_by_maintainer[maintainer]['broken'].append({
-                        "package_id": resource[0].package_id,
-                        "resource_id": resource[0].resource_id,
-                        "status_id": resource[0].status_id,
-                        "first_failure": resource[0].first_failure,
-                        "failure_count": resource[0].failure_count,
-                        "broken_url": resource[2].url,
-                    })
-
-        def create_email_body(broken_items):
-            body = (
-                "You have broken links in your datasets :) \n"
-                "Here are a list of resources with broken links: \n"
-            )
-            for item in broken_items:
-                body += "package: %s || resource: %s || broken url: %s \n" % (
-                    item["package_id"],
-                    item["resource_id"],
-                    item["broken_url"],
-                )
-            return body
+            # TODO: here we should check if it is 403 error
+            # Currently we check if it is broken
+            if Status.is_status_broken(resource[0].status_id):
+                maintainer = resource[1].maintainer
+                if maintainer not in grouped_by_maintainer:
+                    grouped_by_maintainer[maintainer] = {"email": resource[1].maintainer_email, "broken": []}
+                grouped_by_maintainer[maintainer]['broken'].append({
+                    "package_id": resource[0].package_id,
+                    "package_title": resource[1].title,
+                    "resource_id": resource[0].resource_id,
+                    "status_id": resource[0].status_id,
+                    "first_failure": resource[0].first_failure,
+                    "failure_count": resource[0].failure_count,
+                    "broken_url": resource[2].url,
+                })
 
         for maintainer_name, maintainer_details in grouped_by_maintainer.iteritems():
-            print '%s - %s' % (maintainer_name, maintainer_details["email"])
-            body = create_email_body(maintainer_details["broken"])
-            print body
-            # send email
+            # create email and send
+            subject = email_template.subject.format(amount=len(maintainer_details["broken"]))
+            body = email_template.message(maintainer_details["broken"])
+            mail_recipient(maintainer_name, maintainer_details["email"], subject, body)
 
         print 'All messages sent'
