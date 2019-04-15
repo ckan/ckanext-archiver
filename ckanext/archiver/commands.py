@@ -6,6 +6,7 @@ import re
 import shutil
 import itertools
 import ckan.plugins as p
+from datetime import datetime, timedelta
 
 from pylons import config
 try:
@@ -15,6 +16,8 @@ except ImportError:
 from sqlalchemy.sql import func
 
 from ckan.lib.cli import CkanCommand
+from ckan.lib.mailer import mail_recipient
+import email_templates.broken_links_notification as email_template
 
 REQUESTS_HEADER = {'content-type': 'application/json'}
 
@@ -81,6 +84,9 @@ class Archiver(CkanCommand):
            - For when you reduce the ckanext-archiver.max_content_length and
              want to delete archived files that are now above the threshold,
              and stop referring to these files in the Archival table of the db.
+
+        paster archiver send_broken_link_notification
+            - Sends an email notification to datasets maintainers about broken links in their resources
     '''
     # TODO
     #    paster archiver clean-files
@@ -148,6 +154,8 @@ class Archiver(CkanCommand):
             self.size_report()
         elif cmd == 'delete-files-larger-than-max':
             self.delete_files_larger_than_max_content_length()
+        elif cmd == 'send_broken_link_notification':
+            self.send_broken_link_notification_email()
         else:
             self.log.error('Command %s not recognized' % (cmd,))
 
@@ -644,3 +652,48 @@ class Archiver(CkanCommand):
                 model.Session.commit()
                 model.Session.flush()
                 print '..deleted %s' % filepath.decode('utf8')
+
+    def send_broken_link_notification_email(self):
+        from ckan import model
+        from ckanext.archiver.model import Archival, Status
+
+        # send email to datasets which have had broken links for more than 3 days
+        todayMinus4 = datetime.now() - timedelta(days=4)
+
+        resources_with_broken = (model.Session.query(Archival, model.Package, model.Resource)
+            .filter(Archival.is_broken == True) # noqa
+            .join(model.Package, Archival.package_id == model.Package.id)
+            .filter(model.Package.state == 'active')
+            .join(model.Resource, Archival.resource_id == model.Resource.id)
+            .filter(model.Resource.state == 'active'))
+
+        grouped_by_maintainer = {}
+        # Group resources together by maintainer
+        # So we can send only one message to the maintainer containing all their broken resources
+        for resource in resources_with_broken.all():
+            # TODO: here we should check if it is 403 error
+            # Currently we check if it is broken
+            print resource[2].url
+            if Status.is_status_broken(resource[0].status_id):
+                maintainer = resource[1].maintainer
+
+                if maintainer not in grouped_by_maintainer:
+                    grouped_by_maintainer[maintainer] = {"email": resource[1].maintainer_email, "broken": []}
+
+                grouped_by_maintainer[maintainer]['broken'].append({
+                    "package_id": resource[0].package_id,
+                    "package_title": resource[1].title,
+                    "resource_id": resource[0].resource_id,
+                    "status_id": resource[0].status_id,
+                    "first_failure": resource[0].first_failure,
+                    "failure_count": resource[0].failure_count,
+                    "broken_url": resource[2].url,
+                })
+
+        # Create email to each maintainer and send them
+        for maintainer_name, maintainer_details in grouped_by_maintainer.iteritems():
+            subject = email_template.subject.format(amount=len(maintainer_details["broken"]))
+            body = email_template.message(maintainer_details["broken"])
+            mail_recipient(maintainer_name, maintainer_details["email"], subject, body)
+
+        print 'All messages sent'
