@@ -662,6 +662,7 @@ class Archiver(CkanCommand):
 
         resources_with_broken = (model.Session.query(Archival, model.Package, model.Resource)
             .filter(Archival.is_broken == True) # noqa
+            .filter(Archival.first_failure < todayMinus4)
             .join(model.Package, Archival.package_id == model.Package.id)
             .filter(model.Package.state == 'active')
             .join(model.Resource, Archival.resource_id == model.Resource.id)
@@ -671,9 +672,6 @@ class Archiver(CkanCommand):
         # Group resources together by maintainer
         # So we can send only one message to the maintainer containing all their broken resources
         for resource in resources_with_broken.all():
-            # TODO: here we should check if it is 403 error
-            # Currently we check if it is broken
-            print resource[2].url
             if Status.is_status_broken(resource[0].status_id):
                 maintainer = resource[1].maintainer
 
@@ -696,4 +694,4 @@ class Archiver(CkanCommand):
             body = email_template.message(maintainer_details["broken"])
             mail_recipient(maintainer_name, maintainer_details["email"], subject, body)
 
-        print 'All messages sent'
+        log.info('All broken link notifications sent')
