@@ -694,4 +694,4 @@ class Archiver(CkanCommand):
             body = email_template.message(maintainer_details["broken"])
             mail_recipient(maintainer_name, maintainer_details["email"], subject, body)
 
-        log.info('All broken link notifications sent')
+        self.log.info('All broken link notifications sent')
