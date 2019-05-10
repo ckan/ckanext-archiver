@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from pylons import config
 
 """
@@ -8,8 +10,6 @@ from pylons import config
 def message(itemList):
     items = []
     for item in itemList:
-        item["broken_url"] = (item["broken_url"].encode('ascii', 'ignore')).decode("utf-8")
-        item["package_title"] = (item["package_title"].encode('ascii', 'ignore')).decode("utf-8")
         items.append(
             singleItem.format(
                 package_id=item["package_id"],
@@ -17,38 +17,52 @@ def message(itemList):
                 resource_id=item["resource_id"],
                 broken_url=item["broken_url"],
                 site_url=config['ckan.site_url'],
-            ).encode('utf-8')
+            )
         )
 
     separator = '\n'
     return messageTemplate.format(amount=len(itemList), items=separator.join(items))
 
 
-subject = "{amount} broken link(s) in your datasets"
+subject = u"{amount} broken link(s) in your dataset(s) in Avoindata.fi - Yksi tai useampi rikkinäinen linkki tietoaineistoissasi Avoindata.fi-palvelussa" # noqa
 
 
-messageTemplate = """
-You have {amount} broken link(s) in your datasets.
-You can update the link(s) by logging in and navigating to the broken resource.
+messageTemplate = u"""
+Hei,
+ 
+Ylläpidät tietoaineistoja Avoindata.fi-palvelussa. Aineistoissasi on tällä hetkellä (1) tai useampi rikkinäinen linkki,
+jotka on listattu alla. Voit päivittää linkit kirjautumalla palveluun, valitsemalla korjattavan datasetin ja päivittämällä linkin.
+Jos sinulla on kysyttävää, opastamme sinua tarpeen vaatiessa osoitteessa avoindata@vrk.fi.
+ 
+Ystävällisin terveisin,
+Avoindata.fi tuki
+___
+
+Hello,
+ 
+You have uploaded a dataset or datasets in Avoindata.fi. You have {amount} broken link(s) in your datasets.
+You can update the link(s) by logging in, navigating to the broken resource.
+ 
+Should you have any questions or need help, please get in touch with us at avoindata@vrk.fi.
+ 
+Best regards,
+Avoindata.fi support
+
+___
+
 
 {items}
----
 
-Best regards
-
-Avoindata.fi support
-avoindata@vrk.fi
-"""
+""" # noqa
 
 
-singleItem = """---
-
-Dataset:
+singleItem = u"""Tietoaineisto - Dataset:
 {package_title} ( {site_url}/data/fi/dataset/{package_id} )
 
-Resource:
+Resurssi - Resource:
 {site_url}/data/fi/dataset/{package_id}/resource/{resource_id}
 
-Broken link:
+Rikkinäinen linkki - Broken link:
 {broken_url}
+___
 """
