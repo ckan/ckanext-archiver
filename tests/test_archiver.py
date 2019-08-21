@@ -222,7 +222,7 @@ class TestArchiver(BaseCase):
         res_id = self._test_resource('http:host.com')['id']  # no slashes
         result = update_resource(self.config, res_id)
         assert not result, result
-        self.assert_archival_error('Failed to parse', res_id)
+        self.assert_archival_error('URL parsing failure', res_id)
 
     @with_mock_url('?status=200&content=test&content-type=csv')
     def test_resource_hash_and_content_length(self, url):
