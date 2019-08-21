@@ -64,8 +64,8 @@ To install ckanext-archiver:
 
 2. Install the ckanext-archiver and ckanext-report Python packages into your virtual environment::
 
-     pip install -e git+http://github.com/ckan/ckanext-archiver.git#egg=ckanext-archiver
      pip install -e git+http://github.com/datagovuk/ckanext-report.git#egg=ckanext-report
+     pip install -e git+http://github.com/ckan/ckanext-archiver.git#egg=ckanext-archiver
 
 3. Install the archiver dependencies::
 
@@ -296,6 +296,8 @@ However in production you'd run the priority and bulk queues separately, or else
     paster --plugin=ckanext-archiver celeryd2 run bulk -c production.ini
 
 For production use, we recommend setting up Celery to run with supervisord. `apt-get install supervisor` and use `bin/celery-supervisor.conf` as a configuration template.
+
+If you are running CKAN 2.7 or higher, configure job workers instead http://docs.ckan.org/en/2.8/maintaining/background-tasks.html#using-supervisor
 
 An archival can be triggered by adding a dataset with a resource or updating a resource URL. Alternatively you can run::
 

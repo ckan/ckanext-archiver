@@ -18,6 +18,7 @@ Base = declarative_base()
 def make_uuid():
     return unicode(uuid.uuid4())
 
+
 metadata = MetaData()
 
 
@@ -77,6 +78,7 @@ class Status:
     def is_ok(cls, status_id):
         return status_id in [0, 1]
 
+
 broken_enum = {True: 'Broken',
                None: 'Not sure if broken',
                False: 'Downloaded OK'}
@@ -130,7 +132,7 @@ class Archival(Base):
     def get_for_resource(cls, resource_id):
         '''Returns the archival for the given resource, or if it doens't exist,
         returns None.'''
-        return model.Session.query(cls).filter(cls.resource_id==resource_id).first()
+        return model.Session.query(cls).filter(cls.resource_id == resource_id).first()
 
     @classmethod
     def get_for_package(cls, package_id):
@@ -138,9 +140,9 @@ class Archival(Base):
         package has no resources or has not been archived. It checks the
         resources are not deleted.'''
         return model.Session.query(cls) \
-                    .filter(cls.package_id==package_id) \
-                    .join(model.Resource, cls.resource_id==model.Resource.id) \
-                    .filter(model.Resource.state=='active') \
+                    .filter(cls.package_id == package_id) \
+                    .join(model.Resource, cls.resource_id == model.Resource.id) \
+                    .filter(model.Resource.state == 'active') \
                     .all()
 
     @classmethod

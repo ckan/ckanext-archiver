@@ -13,21 +13,43 @@ import mimetypes
 import re
 import routes
 import time
-import urlparse
 
 from requests.packages import urllib3
 
 from ckan.common import _
-from ckan.lib.celery_app import celery
 from ckan.lib import uploader
 from ckan import plugins as p
 from ckanext.archiver import interfaces as archiver_interfaces
+
+import logging
+
+log = logging.getLogger(__name__)
 
 toolkit = p.toolkit
 
 ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
+
+# CKAN 2.7 introduces new jobs system
+if p.toolkit.check_ckan_version(max_version='2.6.99'):
+    from ckan.lib.celery_app import celery
+
+    @celery.task(name="archiver.update_resource")
+    def update_resouce_celery(*args, **kwargs):
+        update_resource(*args, **kwargs)
+
+    @celery.task(name="archiver.update_package")
+    def update_package_celery(*args, **kwargs):
+        update_package(*args, **kwargs)
+
+    @celery.task(name="archiver.clean")
+    def clean_celery(*args, **kwargs):
+        clean(*args, **kwargs)
+
+    @celery.task(name="archiver.link_checker")
+    def link_checker_celery(*args, **kwargs):
+        link_checker(*args, **kwargs)
 
 
 def load_config(ckan_ini_filepath):
@@ -38,79 +60,88 @@ def load_config(ckan_ini_filepath):
     ckan.config.environment.load_environment(conf.global_conf,
                                              conf.local_conf)
 
-    ## give routes enough information to run url_for
+    # give routes enough information to run url_for
     parsed = urlparse.urlparse(conf.get('ckan.site_url', 'http://0.0.0.0'))
     request_config = routes.request_config()
     request_config.host = parsed.netloc + parsed.path
     request_config.protocol = parsed.scheme
 
-    load_translations(conf.get('ckan.locale_default', 'en'))
 
-
-def load_translations(lang):
+def register_translator():
     # Register a translator in this thread so that
     # the _() functions in logic layer can work
-
-    import ckan.lib.i18n
     from paste.registry import Registry
     from pylons import translator
-    from pylons import request
-
+    from ckan.lib.cli import MockTranslator
+    global registry
     registry = Registry()
     registry.prepare()
+    global translator_obj
+    translator_obj = MockTranslator()
+    registry.register(translator, translator_obj)
 
-    class FakePylons:
-            translator = None
-    fakepylons = FakePylons()
-    class FakeRequest:
-        # Stores details of the translator
-        environ = {'pylons.pylons': fakepylons}
-    registry.register(request, FakeRequest())
-
-    # create translator
-    ckan.lib.i18n.set_lang(lang)
-
-    # pull out translator and register it
-    registry.register(translator, fakepylons.translator)
 
 class ArchiverError(Exception):
     pass
+
+
 class ArchiverErrorBeforeDownloadStarted(ArchiverError):
     pass
+
+
 class DownloadException(ArchiverError):
     pass
+
+
 class ArchiverErrorAfterDownloadStarted(ArchiverError):
     def __init__(self, msg, url_redirected_to=None):
         super(ArchiverError, self).__init__(msg)
         self.url_redirected_to = url_redirected_to
+
+
 class DownloadError(ArchiverErrorAfterDownloadStarted):
     pass
+
+
 class ArchiveError(ArchiverErrorAfterDownloadStarted):
     pass
+
+
 class ChooseNotToDownload(ArchiverErrorAfterDownloadStarted):
     pass
+
+
 class NotChanged(ArchiverErrorAfterDownloadStarted):
     pass
+
+
 class LinkCheckerError(ArchiverError):
     pass
+
+
 class LinkInvalidError(LinkCheckerError):
     pass
+
+
 class LinkHeadRequestError(LinkCheckerError):
     pass
+
+
 class LinkHeadMethodNotSupported(LinkCheckerError):
     pass
+
+
 class CkanError(ArchiverError):
     pass
 
 
-@celery.task(name="archiver.update_resource")
 def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     '''
     Archive a resource.
     '''
     load_config(ckan_ini_filepath)
+    register_translator()
 
-    log = update_resource.get_logger()
     log.info('Starting update_resource task: res_id=%r queue=%s', resource_id, queue)
 
     # HACK because of race condition #1481
@@ -120,7 +151,7 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     # Also put try/except around it is easier to monitor ckan's log rather than
     # celery's task status.
     try:
-        result = _update_resource(resource_id, queue, log)
+        result = _update_resource(ckan_ini_filepath, resource_id, queue, log)
         return result
     except Exception, e:
         if os.environ.get('DEBUG'):
@@ -130,14 +161,14 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
                   e, resource_id)
         raise
 
-@celery.task(name="archiver.update_package")
+
 def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     '''
     Archive a package.
     '''
     load_config(ckan_ini_filepath)
+    register_translator()
 
-    log = update_package.get_logger()
     log.info('Starting update_package task: package_id=%r queue=%s',
              package_id, queue)
 
@@ -145,7 +176,7 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     # Also put try/except around it is easier to monitor ckan's log rather than
     # celery's task status.
     try:
-        _update_package(package_id, queue, log)
+        _update_package(ckan_ini_filepath, package_id, queue, log)
     except Exception, e:
         if os.environ.get('DEBUG'):
             raise
@@ -156,7 +187,7 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
         raise
 
 
-def _update_package(package_id, queue, log):
+def _update_package(ckan_ini_filepath, package_id, queue, log):
     from ckan import model
 
     get_action = toolkit.get_action
@@ -167,7 +198,7 @@ def _update_package(package_id, queue, log):
 
     for resource in package['resources']:
         resource_id = resource['id']
-        res = _update_resource(resource_id, queue, log)
+        res = _update_resource(ckan_ini_filepath, resource_id, queue, log)
         if res:
             num_archived += 1
 
@@ -200,7 +231,7 @@ def _update_search_index(package_id, log):
     log.info('Search indexed %s', package['name'])
 
 
-def _update_resource(resource_id, queue, log):
+def _update_resource(ckan_ini_filepath, resource_id, queue, log):
     """
     Link check and archive the given resource.
     If successful, updates the archival table with the cache_url & hash etc.
@@ -222,6 +253,8 @@ def _update_resource(resource_id, queue, log):
         }
     If not successful, returns None.
     """
+    load_config(ckan_ini_filepath)
+
     from ckan import model
     from pylons import config
     from ckan.plugins import toolkit
@@ -258,49 +291,49 @@ def _update_resource(resource_id, queue, log):
     if not url.startswith('http'):
         url = config['ckan.site_url'].rstrip('/') + url
 
-    hosted_externally = not url.startswith(config['ckan.site_url'])
-    # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
-    if resource.get('url_type') == 'upload' and not hosted_externally:
-        log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
-
-        upload = uploader.ResourceUpload(resource)
+    if resource.get('url_type') == 'upload':
+        upload = uploader.get_resource_uploader(resource)
         filepath = upload.get_path(resource['id'])
 
-        try:
-            hash, length = _file_hashnlength(filepath)
-        except IOError, e:
-            log.error('Error while accessing local resource %s: %s', filepath, e)
+        hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse.urlparse(filepath).scheme is not ''
+        # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
+        if not hosted_externally:
+            log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
 
-            download_status_id = Status.by_text('URL request failed')
-            _save(download_status_id, e, resource)
-            return
+            try:
+                hash, length = _file_hashnlength(filepath)
+            except IOError, e:
+                log.error('Error while accessing local resource %s: %s', filepath, e)
 
-        mimetype = None
-        headers = None
-        content_type, content_encoding = mimetypes.guess_type(url)
-        if content_type:
-            mimetype = _clean_content_type(content_type)
-            headers = {'Content-Type': content_type}
+                download_status_id = Status.by_text('URL request failed')
+                _save(download_status_id, e, resource)
+                return
 
-        download_result_mock = {'mimetype': mimetype,
-            'size': length,
-            'hash': hash,
-            'headers': headers,
-            'saved_file': filepath,
-            'url_redirected_to': url,
-            'request_type': 'GET'}
+            mimetype = None
+            headers = None
+            content_type, content_encoding = mimetypes.guess_type(url)
+            if content_type:
+                mimetype = _clean_content_type(content_type)
+                headers = {'Content-Type': content_type}
 
-        archive_result_mock = {'cache_filepath': filepath,
-        'cache_url': url}
+            download_result_mock = {'mimetype': mimetype,
+                                    'size': length,
+                                    'hash': hash,
+                                    'headers': headers,
+                                    'saved_file': filepath,
+                                    'url_redirected_to': url,
+                                    'request_type': 'GET'}
 
-        # Success
-        _save(Status.by_text('Archived successfully'), '', resource,
-            download_result_mock['url_redirected_to'], download_result_mock, archive_result_mock)
+            archive_result_mock = {'cache_filepath': filepath,
+                                   'cache_url': url}
 
-        # The return value is only used by tests. Serialized for Celery.
-        return json.dumps(dict(download_result_mock, **archive_result_mock))
-        # endif: processing locally uploaded resource
+            # Success
+            _save(Status.by_text('Archived successfully'), '', resource,
+                  download_result_mock['url_redirected_to'], download_result_mock, archive_result_mock)
 
+            # The return value is only used by tests. Serialized for Celery.
+            return json.dumps(dict(download_result_mock, **archive_result_mock))
+            # endif: processing locally uploaded resource
 
     log.info("Attempting to download resource: %s" % resource['url'])
     download_result = None
@@ -367,7 +400,7 @@ def _update_resource(resource_id, queue, log):
 
     # Success
     _save(Status.by_text('Archived successfully'), '', resource,
-            download_result['url_redirected_to'], download_result, archive_result)
+          download_result['url_redirected_to'], download_result, archive_result)
 
     # The return value is only used by tests. Serialized for Celery.
     return json.dumps(dict(download_result, **archive_result))
@@ -399,7 +432,6 @@ def download(context, resource, url_timeout=30,
     '''
     from ckanext.archiver import default_settings as settings
     from pylons import config
-    log = update_resource.get_logger()
 
     if max_content_length == 'default':
         max_content_length = settings.MAX_CONTENT_LENGTH
@@ -483,7 +515,7 @@ def download(context, resource, url_timeout=30,
 
     # APIs can return status 200, but contain an error message in the body
     if response_is_an_api_error(content):
-        raise DownloadError(_('Server content contained an API error message: %s') % \
+        raise DownloadError(_('Server content contained an API error message: %s') %
                             content[:250],
                             url_redirected_to)
 
@@ -504,7 +536,7 @@ def download(context, resource, url_timeout=30,
     if length < 2:
         # record fact that resource is zero length
         log.warning('Resource found was length %i - not archiving. Resource: %s %r',
-                 length, resource['id'], url)
+                    length, resource['id'], url)
         raise DownloadError(_("Content-length after streaming was %i") % length,
                             url_redirected_to)
 
@@ -518,6 +550,7 @@ def download(context, resource, url_timeout=30,
             'saved_file': saved_file_path,
             'url_redirected_to': url_redirected_to,
             'request_type': method}
+
 
 def _file_hashnlength(local_path):
     BLOCKSIZE = 65536
@@ -533,6 +566,7 @@ def _file_hashnlength(local_path):
             buf = afile.read(BLOCKSIZE)
 
     return (unicode(hasher.hexdigest()), length)
+
 
 def archive_resource(context, resource, log, result=None, url_timeout=30):
     """
@@ -557,7 +591,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
         file_name = parsed_url.path.split('/')[-1] or 'resource'
         file_name = file_name.strip()  # trailing spaces cause problems
         file_name = file_name.encode('ascii', 'ignore')  # e.g. u'\xa3' signs
-    except:
+    except Exception:
         file_name = "resource"
 
     # move the temp file to the resource's archival directory
@@ -646,7 +680,7 @@ def tidy_url(url):
     # so we are left with an ascii string
     try:
         url = url.decode('ascii')
-    except:
+    except Exception:
         parts = list(urlparse.urlparse(url))
         parts[2] = urllib.quote(parts[2].encode('utf-8'))
         parts[1] = urllib.quote(parts[1].encode('utf-8'))
@@ -850,7 +884,6 @@ def api_request(context, resource):
     and get a valid response. If it does it returns the response, otherwise
     Archives the response and stores what sort of request elicited it.
     '''
-    log = update_resource.get_logger()
     # 'resource' holds the results of the download and will get saved. Only if
     # an API request is successful do we want to save the details of it.
     # However download() gets altered for these API requests. So only give
@@ -894,21 +927,20 @@ def response_is_an_api_error(response_body):
 
     # This appears to be an alternative - I can't find the spec.
     # e.g. http://sedsh13.sedsh.gov.uk/ArcGIS/services/HS/Historic_Scotland/MapServer/WFSServer?service=abc
-    # <ows:ExceptionReport version='1.1.0' language='en' xmlns:ows='http://www.opengis.net/ows'><ows:Exception exceptionCode='NoApplicableCode'><ows:ExceptionText>Wrong service type.</ows:ExceptionText></ows:Exception></ows:ExceptionReport>
+    # <ows:ExceptionReport version='1.1.0' language='en' xmlns:ows='http://www.opengis.net/ows'>
+    # <ows:Exception exceptionCode='NoApplicableCode'><ows:ExceptionText>Wrong service type.
+    # </ows:ExceptionText></ows:Exception></ows:ExceptionReport>
     if '<ows:ExceptionReport' in response_sample:
         return True
 
 
-@celery.task(name="archiver.clean")
 def clean():
     """
     Remove all archived resources.
     """
-    log = clean.get_logger()
     log.error("clean task not implemented yet")
 
 
-@celery.task(name="archiver.link_checker")
 def link_checker(context, data):
     """
     Check that the resource's url is valid, and accepts a HEAD request.
@@ -925,7 +957,6 @@ def link_checker(context, data):
 
     Returns a json dict of the headers of the request
     """
-    log = update_resource.get_logger()
     data = json.loads(data)
     url_timeout = data.get('url_timeout', 30)
 
@@ -939,7 +970,9 @@ def link_checker(context, data):
         res = requests.head(url, timeout=url_timeout)
         headers = res.headers
     except httplib.InvalidURL, ve:
-        log.error("Could not make a head request to %r, error is: %s. Package is: %r. This sometimes happens when using an old version of requests on a URL which issues a 301 redirect. Version=%s", url, ve, data.get('package'), requests.__version__)
+        log.error("Could not make a head request to %r, error is: %s."
+                  " Package is: %r. This sometimes happens when using an old version of requests on a URL"
+                  " which issues a 301 redirect. Version=%s", url, ve, data.get('package'), requests.__version__)
         raise LinkHeadRequestError(_("Invalid URL or Redirect Link"))
     except ValueError, ve:
         log.error("Could not make a head request to %r, error is: %s. Package is: %r.", url, ve, data.get('package'))
@@ -966,5 +999,3 @@ def link_checker(context, data):
                 (res.status_code, res.reason)
             raise LinkHeadRequestError(error_message)
     return json.dumps(dict(headers))
-
-

@@ -81,7 +81,7 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
 
         # get the package as it was at that previous revision
         context = {'model': model, 'session': model.Session,
-                   #'user': c.user or c.author,
+                   # 'user': c.user or c.author,
                    'ignore_auth': True,
                    'revision_id': previous_revision.id}
         data_dict = {'id': package.id}
@@ -130,6 +130,13 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
                               key, res.id[:4], res.position,
                               old_res_value, new_res_value)
                     return True
+
+            was_in_progress = old_resources[res.id].get('upload_in_progress', None)
+            is_in_progress = res.extras.get('upload_in_progress', None)
+            if was_in_progress != is_in_progress:
+                log.debug('Resource %s upload finished - will archive. ', 'upload_finished')
+                return True
+
             log.debug('Resource unchanged. pos=%s id=%s',
                       res.position, res.id[:4])
 
