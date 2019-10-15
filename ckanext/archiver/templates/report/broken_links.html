@@ -59,9 +59,9 @@
             <td><a href="/publisher/{{ row_dict['organization_name'] }}">{{ row_dict['organization_title'] }}</a></td>
           {% endif %}
           <td><a href="/dataset/{{ row_dict['dataset_name'] }}/resource/{{ row_dict['resource_id'] }}">{{ row_dict['resource_position'] }}</a></td>
-          <td><a href="{{ row_dict['resource_url'] }}" style="word-wrap:break-word;">{{ row_dict['resource_url'] }}</a></td>
+          <td><a href="{{ row_dict['resource_url'] }}" style="word-break: break-all">{{ row_dict['resource_url'] }}</a></td>
           <td>{{ row_dict.get('status', 'not recorded') }}</td>
-          <td style="word-wrap: anywhere">{{ row_dict.get('reason', 'not recorded') }}</td>
+          <td style="word-break: break-all">{{ row_dict.get('reason', 'not recorded') }}</td>
           <td>{{ row_dict.get('failure_count', 'not recorded') }}</td>
           <td>{{ h.render_datetime(row_dict.get('first_failure')) if row_dict.get('first_failure') else 'not recorded' }}</td>
           <td>{{ h.render_datetime(row_dict.get('last_updated')) if row_dict.get('last_updated') else 'not recorded' }}</td>
