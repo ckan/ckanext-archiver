@@ -764,8 +764,13 @@ def save_archival(resource, status_id, reason, url_redirected_to,
         log.info('Archival from before: %r', archival)
         previous_archival_was_broken = archival.is_broken
 
-    revision = model.Session.query(model.Revision).get(resource['revision_id'])
-    archival.resource_timestamp = revision.timestamp
+    try:
+        revision = model.Session.query(model.Revision) \
+            .get(resource['revision_id'])
+        archival.resource_timestamp = revision.timestamp
+    except AttributeError:
+        # CKAN 2.9 doesn't have revisions, so we can't get a timestamp
+        pass
 
     # Details of the latest archival attempt
     archival.status_id = status_id
