@@ -248,7 +248,7 @@ Config settings
       * ``ckanext-archiver.max_content_length`` = the maximum size (in bytes) of files to archive (default ``50000000`` =50MB)
       * ``ckanext-archiver.user_agent_string`` = identifies the archiver to servers it archives from
       * ``ckanext-archiver.verify_https`` = true/false whether you want to verify https connections and therefore fail if it is specified in the URL but does not verify.
-
+      * ``ckanext-archiver.send_notification_emails_to_maintainers`` = true/false, controls if broken resource nofications are sent to maintainers, default to false.
 4.  Nightly report generation
 
     Configure the reports to be generated each night using cron. e.g.::
