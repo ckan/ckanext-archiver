@@ -8,7 +8,7 @@ import itertools
 import ckan.plugins as p
 from datetime import datetime, timedelta
 try:
-    from ckan.common import asbool # CKAN 2.9
+    from ckan.common import asbool  # CKAN 2.9
 except ImportError:
     from paste.deploy.converters import asbool
 
