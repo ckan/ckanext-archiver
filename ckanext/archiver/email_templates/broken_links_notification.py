@@ -32,7 +32,7 @@ Hei,
  
 Ylläpidät tietoaineistoja Avoindata.fi-palvelussa. Aineistoissasi on tällä hetkellä (1) tai useampi rikkinäinen linkki,
 jotka on listattu alla. Voit päivittää linkit kirjautumalla palveluun, valitsemalla korjattavan datasetin ja päivittämällä linkin.
-Jos sinulla on kysyttävää, opastamme sinua tarpeen vaatiessa osoitteessa avoindata@vrk.fi.
+Jos sinulla on kysyttävää, opastamme sinua tarpeen vaatiessa osoitteessa avoindata@dvv.fi.
  
 Ystävällisin terveisin,
 Avoindata.fi tuki
@@ -43,7 +43,7 @@ Hello,
 You have uploaded a dataset or datasets in Avoindata.fi. You have {amount} broken link(s) in your datasets.
 You can update the link(s) by logging in, navigating to the broken resource.
  
-Should you have any questions or need help, please get in touch with us at avoindata@vrk.fi.
+Should you have any questions or need help, please get in touch with us at avoindata@dvv.fi.
  
 Best regards,
 Avoindata.fi support
