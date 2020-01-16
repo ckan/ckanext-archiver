@@ -20,7 +20,7 @@ except ImportError:
 from sqlalchemy.sql import func
 
 from ckan.lib.cli import CkanCommand
-from ckan.lib.mailer import mail_recipient
+from ckan.lib.mailer import mail_recipient, MailerException
 import email_templates.broken_links_notification as email_template
 
 REQUESTS_HEADER = {'content-type': 'application/json'}
@@ -698,9 +698,14 @@ class Archiver(CkanCommand):
 
             # Create email to each maintainer and send them
             for maintainer_name, maintainer_details in grouped_by_maintainer.iteritems():
+                self.log.info('Sending broken link notification to %s' % maintainer_details["email"])
                 subject = email_template.subject.format(amount=len(maintainer_details["broken"]))
                 body = email_template.message(maintainer_details["broken"])
-                mail_recipient(maintainer_name, maintainer_details["email"], subject, body)
+                try:
+                    mail_recipient(maintainer_name, maintainer_details["email"], subject, body)
+                except MailerException as e:
+                    self.log.warn('Error sending broken link notification to "%s": %s'
+                                  % (maintainer_details["email"], e))
 
             self.log.info('All broken link notifications sent')
         else:
