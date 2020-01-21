@@ -6,6 +6,9 @@ sudo service jetty restart
 
 if [ $CKANVERSION = 'master' ]
 then
+  echo $PWD
+  cd -
+  echo $PWD
   pytest --ckan-ini=test.ini ckanext/archiver/tests
 else
   nosetests --nologcapture --with-pylons=subdir/test-core.ini --with-coverage --cover-package=ckanext.archiver --cover-inclusive --cover-erase --cover-tests
