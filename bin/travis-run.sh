@@ -4,7 +4,7 @@ echo "NO_START=0\nJETTY_HOST=127.0.0.1\nJETTY_PORT=8983\nJAVA_HOME=$JAVA_HOME" |
 sudo cp ckan/ckan/config/solr/schema.xml /etc/solr/conf/schema.xml
 sudo service jetty restart
 
-if [ $CKANVERSION == 'master' ]
+if [ $CKANVERSION = 'master' ]
 then
   pytest --ckan-ini=test.ini ckanext/archiver/tests
 else
