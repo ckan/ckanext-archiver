@@ -1,13 +1,14 @@
 from __future__ import absolute_import
 from future import standard_library
-standard_library.install_aliases()
 from builtins import str
 import os
 import hashlib
 import http.client
 import requests
 import json
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 import urllib.parse
 import tempfile
 import shutil
@@ -28,6 +29,8 @@ from ckanext.archiver import interfaces as archiver_interfaces
 import logging
 
 log = logging.getLogger(__name__)
+
+standard_library.install_aliases()
 
 toolkit = p.toolkit
 
@@ -299,7 +302,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         upload = uploader.get_resource_uploader(resource)
         filepath = upload.get_path(resource['id'])
 
-        hosted_externally = not url.startswith(config['ckan.site_url']) or urllib.parse.urlparse(filepath).scheme is not ''
+        hosted_externally = not url.startswith(config['ckan.site_url']) or urllib.parse.urlparse(filepath).scheme != ''
         # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
         if not hosted_externally:
             log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
@@ -500,14 +503,14 @@ def download(context, resource, url_timeout=30,
                     pass
     if isinstance(content_length, int) and \
        int(content_length) >= max_content_length:
-            # record fact that resource is too large to archive
-            log.warning('Resource too large to download: %s > max (%s). '
-                        'Resource: %s %r', content_length,
-                        max_content_length, resource['id'], url)
-            raise ChooseNotToDownload(_('Content-length %s exceeds maximum '
-                                      'allowed value %s') %
-                                      (content_length, max_content_length),
-                                      url_redirected_to)
+        # record fact that resource is too large to archive
+        log.warning('Resource too large to download: %s > max (%s). '
+                    'Resource: %s %r', content_length,
+                    max_content_length, resource['id'], url)
+        raise ChooseNotToDownload(_('Content-length %s exceeds maximum '
+                                    'allowed value %s') %
+                                  (content_length, max_content_length),
+                                  url_redirected_to)
     # content_length in the headers is useful but can be unreliable, so when we
     # download, we will monitor it doesn't go over the max.
 
@@ -615,7 +618,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
                     'ckanext-archiver.cache_url_root in config')
         raise ArchiveError(_('No value for ckanext-archiver.cache_url_root in config'))
     cache_url = urllib.parse.urljoin(context['cache_url_root'],
-                                 '%s/%s' % (relative_archive_path, file_name))
+                                     '%s/%s' % (relative_archive_path, file_name))
     return {'cache_filepath': saved_file,
             'cache_url': cache_url}
 
