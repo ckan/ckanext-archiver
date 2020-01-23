@@ -55,8 +55,4 @@ python setup.py develop
 pip install -r requirements.txt
 pip install -r dev-requirements.txt
 
-echo "Moving test-core.ini into a subdir..."
-mkdir subdir
-mv test-core.ini subdir
-
 echo "travis-build.bash is done."
