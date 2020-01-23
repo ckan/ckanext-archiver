@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from future import standard_library
+standard_library.install_aliases()  # noqa
 from builtins import str
 import os
 import hashlib
@@ -29,8 +30,6 @@ from ckanext.archiver import interfaces as archiver_interfaces
 import logging
 
 log = logging.getLogger(__name__)
-
-standard_library.install_aliases()
 
 toolkit = p.toolkit
 
