@@ -176,7 +176,7 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
 
     def get_helpers(self):
         return dict((name, function) for name, function
-                    in helpers.__dict__.items()
+                    in list(helpers.__dict__.items())
                     if callable(function) and name[0] != '_')
 
     # IPackageController

@@ -1,3 +1,5 @@
+from builtins import str
+from builtins import object
 import uuid
 from datetime import datetime
 
@@ -16,7 +18,7 @@ Base = declarative_base()
 
 
 def make_uuid():
-    return unicode(uuid.uuid4())
+    return str(uuid.uuid4())
 
 
 metadata = MetaData()
@@ -25,7 +27,7 @@ metadata = MetaData()
 # enum of all the archival statuses (singleton)
 # NB Be very careful changing these status strings. They are also used in
 # ckanext-qa tasks.py.
-class Status:
+class Status(object):
     _instance = None
 
     def __init__(self):
@@ -49,7 +51,7 @@ class Status:
         self._by_id = dict(not_broken, **broken)
         self._by_id.update(not_sure)
         self._by_text = dict((value, key)
-                             for key, value in self._by_id.iteritems())
+                             for key, value in self._by_id.items())
 
     @classmethod
     def instance(cls):

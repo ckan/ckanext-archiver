@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import input
+from builtins import str
 import logging
 import os
 import sys
@@ -103,7 +106,7 @@ class Archiver(CkanCommand):
         Parse command line arguments and call appropriate method.
         """
         if not self.args or self.args[0] in ['--help', '-h', 'help']:
-            print self.usage
+            print(self.usage)
             sys.exit(1)
 
         cmd = self.args[0]
@@ -287,41 +290,41 @@ class Archiver(CkanCommand):
         from ckanext.archiver.model import Archival
 
         r_q = model.Session.query(model.Resource).filter_by(state='active')
-        print 'Resources: %i total' % r_q.count()
+        print('Resources: %i total' % r_q.count())
         a_q = model.Session.query(Archival)
-        print 'Archived resources: %i total' % a_q.count()
+        print('Archived resources: %i total' % a_q.count())
         num_with_cache_url = a_q.filter(Archival.cache_url != '').count()
-        print '                    %i with cache_url' % num_with_cache_url
+        print('                    %i with cache_url' % num_with_cache_url)
         last_updated_res = a_q.order_by(Archival.updated.desc()).first()
-        print 'Latest archival: %s' % (last_updated_res.updated.strftime('%Y-%m-%d %H:%M') if last_updated_res else '(no)')
+        print('Latest archival: %s' % (last_updated_res.updated.strftime('%Y-%m-%d %H:%M') if last_updated_res else '(no)'))
 
         if package_ref:
             pkg = model.Package.get(package_ref)
-            print 'Package %s %s' % (pkg.name, pkg.id)
+            print('Package %s %s' % (pkg.name, pkg.id))
             for res in pkg.resources:
-                print 'Resource %s' % res.id
+                print('Resource %s' % res.id)
                 for archival in a_q.filter_by(resource_id=res.id):
-                    print '* %r' % archival
+                    print('* %r' % archival)
 
     def clean_status(self):
         from ckan import model
         from ckanext.archiver.model import Archival
 
-        print 'Before:'
+        print('Before:')
         self.view()
 
         q = model.Session.query(Archival)
         q.delete()
         model.Session.commit()
 
-        print 'After:'
+        print('After:')
         self.view()
 
     def clean_cached_resources(self):
         from ckan import model
         from ckanext.archiver.model import Archival
 
-        print 'Before:'
+        print('Before:')
         self.view()
 
         q = model.Session.query(Archival).filter(Archival.cache_url != '')
@@ -336,12 +339,12 @@ class Archiver(CkanCommand):
             archival.hash = None
             progress += 1
             if progress % 1000 == 0:
-                print 'Done %i/%i' % (progress, num_archivals)
+                print('Done %i/%i' % (progress, num_archivals))
                 model.Session.commit()
         model.Session.commit()
         model.Session.remove()
 
-        print 'After:'
+        print('After:')
         self.view()
 
     def report(self, output_file, delete=False):
@@ -420,23 +423,23 @@ class Archiver(CkanCommand):
                                 os.rmdir(root)
                                 self.log.info("Unlinked {0}".format(root))
                                 writer.writerow([m.groups(0)[0], archived_path, "Resource not found, file deleted"])
-                            except Exception, e:
+                            except Exception as e:
                                 self.log.error("Failed to unlink {0}: {1}".format(archived_path, e))
                         else:
                             writer.writerow([m.groups(0)[0], archived_path, "Resource not found"])
 
                         continue
 
-        print "General info:"
-        print "  Permission error reading file: {0}".format(perm_error)
-        print "  file on disk but no resource: {0}".format(file_no_resource)
-        print "  Total resources: {0}".format(model.Session.query(model.Resource).count())
-        print "Active resource info:"
-        print "  No cache_filepath: {0}".format(not_cached_active)
-        print "  cache_filepath not on disk: {0}".format(file_not_found_active)
-        print "Deleted resource info:"
-        print "  No cache_filepath: {0}".format(not_cached_deleted)
-        print "  cache_filepath not on disk: {0}".format(file_not_found_deleted)
+        print("General info:")
+        print("  Permission error reading file: {0}".format(perm_error))
+        print("  file on disk but no resource: {0}".format(file_no_resource))
+        print("  Total resources: {0}".format(model.Session.query(model.Resource).count()))
+        print("Active resource info:")
+        print("  No cache_filepath: {0}".format(not_cached_active))
+        print("  cache_filepath not on disk: {0}".format(file_not_found_active))
+        print("Deleted resource info:")
+        print("  No cache_filepath: {0}".format(not_cached_deleted))
+        print("  cache_filepath not on disk: {0}".format(file_not_found_deleted))
 
     def migrate(self):
         """ Adds any missing columns to the database table for Archival by
@@ -462,14 +465,14 @@ class Archiver(CkanCommand):
 
         q = "select column_name from INFORMATION_SCHEMA.COLUMNS where table_name = 'archival';"
         current_cols = list([m[0] for m in model.Session.execute(q)])
-        for k, v in MIGRATIONS_ADD.iteritems():
+        for k, v in MIGRATIONS_ADD.items():
             if k not in current_cols:
                 self.log.info(u"Adding column '{0}'".format(k))
                 self.log.info(u"Executing '{0}'".format(v))
                 model.Session.execute(v)
                 model.Session.commit()
 
-        for k, v in MIGRATIONS_MODIFY.iteritems():
+        for k, v in MIGRATIONS_MODIFY.items():
             if k in current_cols:
                 self.log.info(u"Removing column '{0}'".format(k))
                 self.log.info(u"Executing '{0}'".format(v))
@@ -494,11 +497,11 @@ class Archiver(CkanCommand):
             if not resource.cache_url or resource.cache_url == 'None':
                 continue
             if new_dir_regex.match(resource.cache_url):
-                print 'Resource with new url already: %s' % resource.cache_url
+                print('Resource with new url already: %s' % resource.cache_url)
                 continue
             match = old_dir_regex.match(resource.cache_url)
             if not match:
-                print 'ERROR Could not match url: %s' % resource.cache_url
+                print('ERROR Could not match url: %s' % resource.cache_url)
                 continue
             url_base, res_id, filename = match.groups()
             # check the package isn't deleted
@@ -512,11 +515,11 @@ class Archiver(CkanCommand):
                 package = resource.package
 
             if package and package.state == model.State.DELETED:
-                print 'Package is deleted'
+                print('Package is deleted')
                 continue
 
             if url_base != site_url_base:
-                print 'ERROR Base URL is incorrect: %r != %r' % (url_base, site_url_base)
+                print('ERROR Base URL is incorrect: %r != %r' % (url_base, site_url_base))
                 continue
 
             # move the file
@@ -528,19 +531,19 @@ class Archiver(CkanCommand):
             if not os.path.exists(new_dir):
                 os.mkdir(new_dir)
             if os.path.exists(new_path) and not os.path.exists(old_path):
-                print 'File already moved: %s' % new_path
+                print('File already moved: %s' % new_path)
             else:
-                print 'File: "%s" -> "%s"' % (old_path, new_path)
+                print('File: "%s" -> "%s"' % (old_path, new_path))
                 try:
                     shutil.move(old_path, new_path)
-                except IOError, e:
-                    print 'ERROR moving resource: %s' % e
+                except IOError as e:
+                    print('ERROR moving resource: %s' % e)
                     continue
 
             # change the cache_url and cache_filepath
             new_cache_url = '/'.join((url_base, res_id[:2], res_id, filename))
-            print 'cache_filepath: "%s" -> "%s"' % (resource.extras.get('cache_filepath'), new_filepath)
-            print 'cache_url: "%s" -> "%s"' % (resource.cache_url, new_cache_url)
+            print('cache_filepath: "%s" -> "%s"' % (resource.extras.get('cache_filepath'), new_filepath))
+            print('cache_url: "%s" -> "%s"' % (resource.cache_url, new_cache_url))
             context = {'model': model, 'user': site_user['name'], 'ignore_auth': True, 'session': model.Session}
             data_dict = {'id': resource.id}
             res_dict = get_action('resource_show')(context, data_dict)
@@ -549,9 +552,9 @@ class Archiver(CkanCommand):
             data_dict = res_dict
             result = get_action('resource_update')(context, data_dict)
             if result.get('id') == res_id:
-                print 'Successfully updated resource'
+                print('Successfully updated resource')
             else:
-                print 'ERROR updating resource: %r' % result
+                print('ERROR updating resource: %r' % result)
 
     def size_report(self):
         from ckan import model
@@ -568,8 +571,8 @@ class Archiver(CkanCommand):
         previous_bin = (0, '')
         counts = []
         total_sizes = []
-        print '{:>15}{:>10}{:>20}'.format(
-            'file size', 'no. files', 'files size (bytes)')
+        print('{:>15}{:>10}{:>20}'.format(
+            'file size', 'no. files', 'files size (bytes)'))
         for size_bin in size_bins:
             q = model.Session.query(Archival) \
                      .filter(Archival.size > previous_bin[0]) \
@@ -596,9 +599,9 @@ class Archiver(CkanCommand):
                 .all()[0][0]
             total_size = int(total_size or 0)
             total_sizes.append(total_size)
-            print '{:>15}{:>10,}{:>20,}'.format(size_bin[1], count, total_size)
+            print('{:>15}{:>10,}{:>20,}'.format(size_bin[1], count, total_size))
             previous_bin = size_bin
-        print 'Totals: {:,} {:,}'.format(sum(counts), sum(total_sizes))
+        print('Totals: {:,} {:,}'.format(sum(counts), sum(total_sizes)))
 
     def delete_files_larger_than_max_content_length(self):
         from ckan import model
@@ -612,35 +615,35 @@ class Archiver(CkanCommand):
         total_size = int(model.Session.query(func.sum(Archival.size))
                          .filter(Archival.size > max_size)
                          .all()[0][0] or 0)
-        print '{} archivals above the {:,} threshold with total size {:,}'.format(
-            len(archivals), max_size, total_size)
-        raw_input('Press Enter to DELETE them')
+        print('{} archivals above the {:,} threshold with total size {:,}'.format(
+            len(archivals), max_size, total_size))
+        input('Press Enter to DELETE them')
         for archival in archivals:
-            print 'Deleting %r' % archival
+            print('Deleting %r' % archival)
             resource = model.Resource.get(archival.resource_id)
             if resource.state == 'deleted':
-                print 'Nothing to delete - Resource is deleted - deleting archival'
+                print('Nothing to delete - Resource is deleted - deleting archival')
                 model.Session.delete(archival)
                 model.Session.commit()
                 model.Session.flush()
                 continue
             pkg = model.Package.get(archival.package_id)
             if pkg.state == 'deleted':
-                print 'Nothing to delete - Dataset is deleted - deleting archival'
+                print('Nothing to delete - Dataset is deleted - deleting archival')
                 model.Session.delete(archival)
                 model.Session.commit()
                 model.Session.flush()
                 continue
             filepath = archival.cache_filepath
             if not os.path.exists(filepath):
-                print 'Skipping - file not on disk'
+                print('Skipping - file not on disk')
                 continue
             try:
                 os.unlink(filepath)
             except OSError:
-                print 'ERROR deleting %s' % filepath.decode('utf8')
+                print('ERROR deleting %s' % filepath.decode('utf8'))
             else:
                 archival.cache_filepath = None
                 model.Session.commit()
                 model.Session.flush()
-                print '..deleted %s' % filepath.decode('utf8')
+                print('..deleted %s' % filepath.decode('utf8'))
