@@ -8,5 +8,5 @@ if [ $CKANVERSION = 'master' ]
 then
   pytest --ckan-ini=test-core.ini --cov=ckanext.archiver tests/
 else
-  nosetests --nologcapture --with-pylons=subdir/test-core.ini --with-coverage --cover-package=ckanext.archiver --cover-inclusive --cover-erase --cover-tests tests-py2
+  nosetests --nologcapture --with-pylons=test-core.ini --with-coverage --cover-package=ckanext.archiver --cover-inclusive --cover-erase --cover-tests tests-py2
 fi
