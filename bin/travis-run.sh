@@ -6,7 +6,8 @@ sudo service jetty restart
 
 if [ $CKANVERSION = 'master' ]
 then
-  pytest --ckan-ini=subdir/test.ini --cov=ckanext.archiver
+  cd ckan
+  pytest --ckan-ini=../subdir/test-core.ini --cov=ckanext.archiver
 else
   nosetests --nologcapture --with-pylons=subdir/test-core.ini --with-coverage --cover-package=ckanext.archiver --cover-inclusive --cover-erase --cover-tests
 fi
