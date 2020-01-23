@@ -8,8 +8,8 @@ sudo apt-get update -qq
 sudo apt-get install solr-jetty libcommons-fileupload-java
 
 echo "Installing CKAN and its Python dependencies..."
-git clone https://github.com/ckan/ckan
-cd ckan
+git clone https://github.com/ckan/ckan ../ckan
+cd ../ckan
 #export latest_ckan_release_branch=`git branch --all | grep remotes/origin/release-v | sort -r | sed 's/remotes\/origin\///g' | head -n 1`
 #export ckan_branch=release-v2.2-dgu
 if [ $CKANVERSION == 'master' ]
@@ -35,9 +35,9 @@ sudo -u postgres psql -c "CREATE USER ckan_default WITH PASSWORD 'pass';"
 sudo -u postgres psql -c 'CREATE DATABASE ckan_test WITH OWNER ckan_default;'
 
 echo "Initialising the database..."
-cd ckan
+cd ../ckan
 paster db init -c test-core.ini
-cd -
+cd ..
 
 echo "SOLR config..."
 # solr is multicore for tests on ckan master now, but it's easier to run tests
@@ -49,6 +49,8 @@ echo "Installing dependency ckanext-report and its requirements..."
 pip install -e git+https://github.com/datagovuk/ckanext-report.git#egg=ckanext-report
 
 echo "Installing ckanext-archiver and its requirements..."
+mv ckanext-archiver ckan
+cd ckan/ckanext-archiver
 python setup.py develop
 pip install -r requirements.txt
 pip install -r dev-requirements.txt
