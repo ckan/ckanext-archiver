@@ -616,7 +616,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
         log.warning('Not saved cache_url because no value for '
                     'ckanext-archiver.cache_url_root in config')
         raise ArchiveError(_('No value for ckanext-archiver.cache_url_root in config'))
-    cache_url = urllib.parse.urljoin(context['cache_url_root'],
+    cache_url = urllib.parse.urljoin(str(context['cache_url_root']),
                                      '%s/%s' % (str(relative_archive_path), str(file_name)))
     return {'cache_filepath': saved_file,
             'cache_url': cache_url}
