@@ -1,4 +1,6 @@
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()  # noqa
 import logging
 import os
 import shutil
@@ -7,7 +9,7 @@ from functools import wraps
 import json
 import mock
 
-from urllib import quote_plus
+from urllib.parse import quote_plus
 from pylons import config
 import pytest
 

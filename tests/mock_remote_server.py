@@ -2,11 +2,16 @@
 An HTTP server that listens on localhost and returns a variety of responses for
 mocking remote servers.
 """
+from future import standard_library
+standard_library.install_aliases()  # noqa
+from builtins import str
+from builtins import range
+from builtins import object
 from contextlib import contextmanager
 from threading import Thread
 from time import sleep
 from wsgiref.simple_server import make_server
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import socket
 import os
 from functools import reduce
@@ -70,7 +75,7 @@ class MockHTTPServer(object):
             # call completes. Set a very small timeout as we don't actually need to
             # wait for a response. We don't care about exceptions here either.
             try:
-                urllib2.urlopen("http://%s:%s/" % (host, port), timeout=0.01)
+                urllib.request.urlopen("http://%s:%s/" % (host, port), timeout=0.01)
             except Exception:
                 pass
 
@@ -109,7 +114,7 @@ class MockEchoTestServer(MockHTTPServer):
 
     def __call__(self, environ, start_response):
 
-        from httplib import responses
+        from http.client import responses
         from webob import Request
         request = Request(environ)
         status = int(request.str_params.get('status', '200'))
@@ -133,12 +138,12 @@ class MockEchoTestServer(MockHTTPServer):
             content = ''
             status = 405
 
-        if isinstance(content, unicode):
+        if isinstance(content, str):
             raise TypeError("Expected raw byte string for content")
 
         headers = [
             item
-            for item in request.str_params.items()
+            for item in list(request.str_params.items())
             if item[0] not in ('content', 'status')
         ]
         if 'length' in request.str_params:
@@ -184,7 +189,7 @@ class MockWmsServer(MockHTTPServer):
         super(MockWmsServer, self).__init__()
 
     def __call__(self, environ, start_response):
-        from httplib import responses
+        from http.client import responses
         from webob import Request
         request = Request(environ)
         status = int(request.str_params.get('status', '200'))
@@ -208,7 +213,7 @@ class MockWmsServer(MockHTTPServer):
             content = get_file_content('wms_getcap_1.3.xml')
         start_response(
             '%d %s' % (status, responses[status]),
-            headers.items()
+            list(headers.items())
         )
         return [content]
 
@@ -220,7 +225,7 @@ class MockWfsServer(MockHTTPServer):
         super(MockWfsServer, self).__init__()
 
     def __call__(self, environ, start_response):
-        from httplib import responses
+        from http.client import responses
         from webob import Request
         request = Request(environ)
         status = int(request.str_params.get('status', '200'))
@@ -237,7 +242,7 @@ class MockWfsServer(MockHTTPServer):
             content = get_file_content('wfs_getcap.xml')
         start_response(
             '%d %s' % (status, responses[status]),
-            headers.items()
+            list(headers.items())
         )
         return [content]
 
