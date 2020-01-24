@@ -11,7 +11,9 @@ from contextlib import contextmanager
 from threading import Thread
 from time import sleep
 from wsgiref.simple_server import make_server
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 import socket
 import os
 from functools import reduce
