@@ -1,10 +1,16 @@
+from __future__ import absolute_import
+from builtins import str
+from future import standard_library
+standard_library.install_aliases()  # noqa
 import os
 import hashlib
-import httplib
+import http.client
 import requests
 import json
-import urllib
-import urlparse
+import urllib.request
+import urllib.parse
+import urllib.error
+import urllib.parse
 import tempfile
 import shutil
 import datetime
@@ -61,7 +67,7 @@ def load_config(ckan_ini_filepath):
                                              conf.local_conf)
 
     # give routes enough information to run url_for
-    parsed = urlparse.urlparse(conf.get('ckan.site_url', 'http://0.0.0.0'))
+    parsed = urllib.parse.urlparse(conf.get('ckan.site_url', 'http://0.0.0.0'))
     request_config = routes.request_config()
     request_config.host = parsed.netloc + parsed.path
     request_config.protocol = parsed.scheme
@@ -153,7 +159,7 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     try:
         result = _update_resource(ckan_ini_filepath, resource_id, queue, log)
         return result
-    except Exception, e:
+    except Exception as e:
         if os.environ.get('DEBUG'):
             raise
         # Any problem at all is logged and reraised so that celery can log it too
@@ -177,7 +183,7 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     # celery's task status.
     try:
         _update_package(ckan_ini_filepath, package_id, queue, log)
-    except Exception, e:
+    except Exception as e:
         if os.environ.get('DEBUG'):
             raise
         # Any problem at all is logged and reraised so that celery can log it
@@ -295,14 +301,14 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         upload = uploader.get_resource_uploader(resource)
         filepath = upload.get_path(resource['id'])
 
-        hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse.urlparse(filepath).scheme is not ''
+        hosted_externally = not url.startswith(config['ckan.site_url']) or urllib.parse.urlparse(filepath).scheme != ''
         # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
         if not hosted_externally:
             log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
 
             try:
                 hash, length = _file_hashnlength(filepath)
-            except IOError, e:
+            except IOError as e:
                 log.error('Error while accessing local resource %s: %s', filepath, e)
 
                 download_status_id = Status.by_text('URL request failed')
@@ -345,23 +351,23 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         }
     try:
         download_result = download(context, resource)
-    except NotChanged, e:
+    except NotChanged as e:
         download_status_id = Status.by_text('Content has not changed')
         try_as_api = False
         requires_archive = False
-    except LinkInvalidError, e:
+    except LinkInvalidError as e:
         download_status_id = Status.by_text('URL invalid')
         try_as_api = False
-    except DownloadException, e:
+    except DownloadException as e:
         download_status_id = Status.by_text('Download error')
         try_as_api = True
-    except DownloadError, e:
+    except DownloadError as e:
         download_status_id = Status.by_text('Download error')
         try_as_api = True
-    except ChooseNotToDownload, e:
+    except ChooseNotToDownload as e:
         download_status_id = Status.by_text('Chose not to download')
         try_as_api = False
-    except Exception, e:
+    except Exception as e:
         if os.environ.get('DEBUG'):
             raise
         log.error('Uncaught download failure: %r, %r', e, e.args)
@@ -393,7 +399,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
     log.info('Attempting to archive resource')
     try:
         archive_result = archive_resource(context, resource, log, download_result)
-    except ArchiveError, e:
+    except ArchiveError as e:
         log.error('System error during archival: %r, %r', e, e.args)
         _save(Status.by_text('System error during archival'), e, resource, download_result['url_redirected_to'])
         return
@@ -496,14 +502,14 @@ def download(context, resource, url_timeout=30,
                     pass
     if isinstance(content_length, int) and \
        int(content_length) >= max_content_length:
-            # record fact that resource is too large to archive
-            log.warning('Resource too large to download: %s > max (%s). '
-                        'Resource: %s %r', content_length,
-                        max_content_length, resource['id'], url)
-            raise ChooseNotToDownload(_('Content-length %s exceeds maximum '
-                                      'allowed value %s') %
-                                      (content_length, max_content_length),
-                                      url_redirected_to)
+        # record fact that resource is too large to archive
+        log.warning('Resource too large to download: %s > max (%s). '
+                    'Resource: %s %r', content_length,
+                    max_content_length, resource['id'], url)
+        raise ChooseNotToDownload(_('Content-length %s exceeds maximum '
+                                    'allowed value %s') %
+                                  (content_length, max_content_length),
+                                  url_redirected_to)
     # content_length in the headers is useful but can be unreliable, so when we
     # download, we will monitor it doesn't go over the max.
 
@@ -528,7 +534,7 @@ def download(context, resource, url_timeout=30,
     log.info('Saving resource')
     try:
         length, hash, saved_file_path = _save_resource(resource, res, max_content_length)
-    except ChooseNotToDownload, e:
+    except ChooseNotToDownload as e:
         raise ChooseNotToDownload(str(e), url_redirected_to)
     log.info('Resource saved. Length: %s File: %s', length, saved_file_path)
 
@@ -565,7 +571,7 @@ def _file_hashnlength(local_path):
 
             buf = afile.read(BLOCKSIZE)
 
-    return (unicode(hasher.hexdigest()), length)
+    return (str(hasher.hexdigest()), length)
 
 
 def archive_resource(context, resource, log, result=None, url_timeout=30):
@@ -586,7 +592,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
     if not os.path.exists(archive_dir):
         os.makedirs(archive_dir)
     # try to get a file name from the url
-    parsed_url = urlparse.urlparse(resource.get('url'))
+    parsed_url = urllib.parse.urlparse(resource.get('url'))
     try:
         file_name = parsed_url.path.split('/')[-1] or 'resource'
         file_name = file_name.strip()  # trailing spaces cause problems
@@ -599,8 +605,8 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
     shutil.move(result['saved_file'], saved_file)
     log.info('Going to do chmod: %s', saved_file)
     try:
-        os.chmod(saved_file, 0644)  # allow other users to read it
-    except Exception, e:
+        os.chmod(saved_file, 0o644)  # allow other users to read it
+    except Exception as e:
         log.error('chmod failed %s: %s', saved_file, e)
         raise
     log.info('Archived resource as: %s', saved_file)
@@ -610,8 +616,8 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
         log.warning('Not saved cache_url because no value for '
                     'ckanext-archiver.cache_url_root in config')
         raise ArchiveError(_('No value for ckanext-archiver.cache_url_root in config'))
-    cache_url = urlparse.urljoin(context['cache_url_root'],
-                                 '%s/%s' % (relative_archive_path, file_name))
+    cache_url = urllib.parse.urljoin(str(context['cache_url_root']),
+                                     '%s/%s' % (str(relative_archive_path), str(file_name)))
     return {'cache_filepath': saved_file,
             'cache_url': cache_url}
 
@@ -681,10 +687,10 @@ def tidy_url(url):
     try:
         url = url.decode('ascii')
     except Exception:
-        parts = list(urlparse.urlparse(url))
-        parts[2] = urllib.quote(parts[2].encode('utf-8'))
-        parts[1] = urllib.quote(parts[1].encode('utf-8'))
-        url = urlparse.urlunparse(parts)
+        parts = list(urllib.parse.urlparse(url))
+        parts[2] = urllib.parse.quote(parts[2].encode('utf-8'))
+        parts[1] = urllib.parse.quote(parts[1].encode('utf-8'))
+        url = urllib.parse.urlunparse(parts)
     url = str(url)
 
     # strip whitespace from url
@@ -696,7 +702,7 @@ def tidy_url(url):
     # caught well
     try:
         parsed_url = urllib3.util.parse_url(url)
-    except urllib3.exceptions.LocationParseError, e:
+    except urllib3.exceptions.LocationParseError as e:
         raise LinkInvalidError(_('URL parsing failure: %s') % e)
 
     # Check we aren't using any schemes we shouldn't be.
@@ -738,7 +744,7 @@ def _save_resource(resource, response, max_file_size, chunk_size=1024*16):
 
     os.close(fd)
 
-    content_hash = unicode(resource_hash.hexdigest())
+    content_hash = str(resource_hash.hexdigest())
     return length, content_hash, tmp_resource_file_path
 
 
@@ -819,11 +825,11 @@ def requests_wrapper(log, func, *args, **kwargs):
     runs:
         res = requests.get(url, timeout=url_timeout)
     '''
-    from requests_ssl import SSLv3Adapter
+    from .requests_ssl import SSLv3Adapter
     try:
         try:
             response = func(*args, **kwargs)
-        except requests.exceptions.ConnectionError, e:
+        except requests.exceptions.ConnectionError as e:
             if 'SSL23_GET_SERVER_HELLO' not in str(e):
                 raise
             log.info('SSLv23 failed so trying again using SSLv3: %r', args)
@@ -833,17 +839,17 @@ def requests_wrapper(log, func, *args, **kwargs):
                     requests.post: requests_session.post}[func]
             response = func(*args, **kwargs)
 
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         raise DownloadException(_('Connection error: %s') % e)
-    except requests.exceptions.HTTPError, e:
+    except requests.exceptions.HTTPError as e:
         raise DownloadException(_('Invalid HTTP response: %s') % e)
-    except requests.exceptions.Timeout, e:
+    except requests.exceptions.Timeout as e:
         raise DownloadException(_('Connection timed out after %ss') % kwargs.get('timeout', '?'))
-    except requests.exceptions.TooManyRedirects, e:
+    except requests.exceptions.TooManyRedirects as e:
         raise DownloadException(_('Too many redirects'))
-    except requests.exceptions.RequestException, e:
+    except requests.exceptions.RequestException as e:
         raise DownloadException(_('Error downloading: %s') % e)
-    except Exception, e:
+    except Exception as e:
         if os.environ.get('DEBUG'):
             raise
         raise DownloadException(_('Error with the download: %s') % e)
@@ -897,11 +903,11 @@ def api_request(context, resource):
         resource_copy = copy.deepcopy(resource)
         try:
             download_dict = api_request_func(context, resource_copy)
-        except ArchiverError, e:
+        except ArchiverError as e:
             log.info('API %s error: %r, %r "%s"', api_request_func,
                      e, e.args, resource.get('url'))
             continue
-        except Exception, e:
+        except Exception as e:
             if os.environ.get('DEBUG'):
                 raise
             log.error('Uncaught API %s failure: %r, %r', api_request_func,
@@ -974,25 +980,25 @@ def link_checker(context, data):
     try:
         res = requests.head(url, timeout=url_timeout)
         headers = res.headers
-    except httplib.InvalidURL, ve:
+    except http.client.InvalidURL as ve:
         log.error("Could not make a head request to %r, error is: %s."
                   " Package is: %r. This sometimes happens when using an old version of requests on a URL"
                   " which issues a 301 redirect. Version=%s", url, ve, data.get('package'), requests.__version__)
         raise LinkHeadRequestError(_("Invalid URL or Redirect Link"))
-    except ValueError, ve:
+    except ValueError as ve:
         log.error("Could not make a head request to %r, error is: %s. Package is: %r.", url, ve, data.get('package'))
         raise LinkHeadRequestError(_("Could not make HEAD request"))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         raise LinkHeadRequestError(_('Connection error: %s') % e)
-    except requests.exceptions.HTTPError, e:
+    except requests.exceptions.HTTPError as e:
         raise LinkHeadRequestError(_('Invalid HTTP response: %s') % e)
-    except requests.exceptions.Timeout, e:
+    except requests.exceptions.Timeout as e:
         raise LinkHeadRequestError(_('Connection timed out after %ss') % url_timeout)
-    except requests.exceptions.TooManyRedirects, e:
+    except requests.exceptions.TooManyRedirects as e:
         raise LinkHeadRequestError(_('Too many redirects'))
-    except requests.exceptions.RequestException, e:
+    except requests.exceptions.RequestException as e:
         raise LinkHeadRequestError(_('Error during request: %s') % e)
-    except Exception, e:
+    except Exception as e:
         raise LinkHeadRequestError(_('Error with the request: %s') % e)
     else:
         if res.status_code == 405:
