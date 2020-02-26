@@ -1,13 +1,17 @@
-#!/bin/sh -e
+#!/bin/bash
+set -e
 
-echo "NO_START=0\nJETTY_HOST=127.0.0.1\nJETTY_PORT=8983\nJAVA_HOME=$JAVA_HOME" | sudo tee /etc/default/jetty
-sudo cp ../ckan/ckan/config/solr/schema.xml /etc/solr/conf/schema.xml
-sudo service jetty restart
-
-if [ $CKANVERSION = 'master' ]
+if [ $CKANVERSION == 'master' ]
 then
-  cd ckan
-  pytest --ckan-ini=../subdir/test-core.ini --cov=ckanext.archiver ../tests/
+    export CKAN_MINOR_VERSION=100
 else
-  nosetests --nologcapture --with-pylons=subdir/test-core.ini --with-coverage --cover-package=ckanext.archiver --cover-inclusive --cover-erase --cover-tests tests-py2
+    export CKAN_MINOR_VERSION=${CKANVERSION##*.}
+fi
+
+
+if (( $CKAN_MINOR_VERSION >= 9 ))
+then
+    pytest --ckan-ini=subdir/test.ini --cov=ckanext.archiver ckanext/archiver/tests
+else
+    nosetests --ckan --nologcapture --with-pylons=subdir/test-nose.ini --with-coverage --cover-package=ckanext.archiver --cover-inclusive --cover-erase --cover-tests ckanext/archiver/tests/nose
 fi
