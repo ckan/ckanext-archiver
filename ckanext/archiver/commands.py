@@ -696,8 +696,16 @@ class Archiver(CkanCommand):
                         "broken_url": resource[2].url,
                     })
 
+            exempt_email_domains = config.get('ckanext-archiver.exempt_domains_from_broken_link_notifications', [])
             # Create email to each maintainer and send them
             for maintainer_name, maintainer_details in grouped_by_maintainer.iteritems():
+
+                if maintainer_details.get('email'):
+                    maintainer_domain = maintainer_details['email'].split('@')[1]
+                    if maintainer_domain in exempt_email_domains:
+                        self.log.info('Maintainer in exempt domains, not sending email..')
+                        continue
+
                 self.log.info('Sending broken link notification to %s' % maintainer_details["email"])
                 subject = email_template.subject.format(amount=len(maintainer_details["broken"]))
                 body = email_template.message(maintainer_details["broken"])
