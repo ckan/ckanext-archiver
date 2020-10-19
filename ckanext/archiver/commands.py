@@ -665,12 +665,12 @@ class Archiver(CkanCommand):
             from ckan import model
             from ckanext.archiver.model import Archival, Status
 
-            # send email to datasets which have had broken links for more than 3 days
-            todayMinus4 = datetime.now() - timedelta(days=4)
+            # send email to datasets which have had broken links for more than 5 days
+            todayMinus5 = datetime.now() - timedelta(days=5)
 
             resources_with_broken = (model.Session.query(Archival, model.Package, model.Resource)
                 .filter(Archival.is_broken == True) # noqa
-                .filter(Archival.first_failure < todayMinus4)
+                .filter(Archival.first_failure < todayMinus5)
                 .join(model.Package, Archival.package_id == model.Package.id)
                 .filter(model.Package.state == 'active')
                 .join(model.Resource, Archival.resource_id == model.Resource.id)
