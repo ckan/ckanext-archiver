@@ -460,9 +460,11 @@ def download(context, resource, url_timeout=30,
     # start the download - just get the headers
     # May raise DownloadException
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
+    proxy = config.get('ckan.download_proxy')
     res = requests_wrapper(log, method_func, url, timeout=url_timeout,
                            stream=True, headers=headers,
                            verify=verify_https(),
+                           proxies={'http': proxy, 'https': proxy}
                            )
     url_redirected_to = res.url if url != res.url else None
 
