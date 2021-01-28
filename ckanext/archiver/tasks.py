@@ -463,7 +463,9 @@ def download(context, resource, url_timeout=30,
     kwargs = {'timeout': url_timeout, 'stream': True, 'headers': headers,
               'verify': verify_https()}
     if 'ckan.download_proxy' in config:
-        kwargs['download_proxy'] = config.get('ckan.download_proxy')
+        download_proxy = config.get('ckan.download_proxy')
+        log.debug('Downloading via proxy %s', download_proxy)
+        kwargs['proxies'] = {'http': download_proxy, 'https': download_proxy}
     res = requests_wrapper(log, method_func, url, **kwargs)
     url_redirected_to = res.url if url != res.url else None
 
@@ -822,10 +824,6 @@ def requests_wrapper(log, func, *args, **kwargs):
     '''
     from requests_ssl import SSLv3Adapter
     try:
-        if 'download_proxy' in kwargs:
-            download_proxy = kwargs.pop('download_proxy', None)
-            log.debug('Downloading via proxy %s', download_proxy)
-            kwargs['proxies'] = {'http': download_proxy, 'https': download_proxy}
         try:
             response = func(*args, **kwargs)
         except requests.exceptions.ConnectionError, e:
