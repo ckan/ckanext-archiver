@@ -20,6 +20,10 @@ else
     git checkout $CKAN_TAG
     echo "CKAN version: ${CKAN_TAG#ckan-}"
 fi
+if [ -f requirement-setuptools.txt ]
+then
+    pip install -r requirement-setuptools.txt
+fi
 python setup.py develop
 if [ -f requirements-py2.txt ]
 then
