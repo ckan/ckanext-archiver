@@ -40,7 +40,11 @@ sudo -u postgres psql -c 'CREATE DATABASE ckan_test WITH OWNER ckan_default;'
 
 echo "Initialising the database..."
 cd ckan
-paster db init -c test-core.ini
+if (which ckan > /dev/null); then
+    ckan -c test-core.ini db init
+else
+    paster --plugin=ckan db init -c test-core.ini
+fi
 cd -
 
 echo "SOLR config..."
