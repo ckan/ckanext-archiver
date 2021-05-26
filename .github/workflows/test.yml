@@ -65,4 +65,4 @@ jobs:
           paster --plugin=ckan db init -c test.ini
           paster --plugin=ckanext-archiver archiver init -c test.ini
       - name: Run tests
-        run: pytest --ckan-ini=test.ini --cov=ckanext.archiver --disable-warnings ckanext/archiver/tests
+        run: pytest --ckan-ini=test.ini --cov=ckanext.archiver --disable-warnings tests
