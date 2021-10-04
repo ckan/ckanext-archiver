@@ -851,9 +851,9 @@ def requests_wrapper(log, func, *args, **kwargs):
         raise DownloadException(_('Connection error: %s') % e)
     except requests.exceptions.HTTPError as e:
         raise DownloadException(_('Invalid HTTP response: %s') % e)
-    except requests.exceptions.Timeout as e:
+    except requests.exceptions.Timeout:
         raise DownloadException(_('Connection timed out after %ss') % kwargs.get('timeout', '?'))
-    except requests.exceptions.TooManyRedirects as e:
+    except requests.exceptions.TooManyRedirects:
         raise DownloadException(_('Too many redirects'))
     except requests.exceptions.RequestException as e:
         raise DownloadException(_('Error downloading: %s') % e)
@@ -1000,9 +1000,9 @@ def link_checker(context, data):
         raise LinkHeadRequestError(_('Connection error: %s') % e)
     except requests.exceptions.HTTPError as e:
         raise LinkHeadRequestError(_('Invalid HTTP response: %s') % e)
-    except requests.exceptions.Timeout as e:
+    except requests.exceptions.Timeout:
         raise LinkHeadRequestError(_('Connection timed out after %ss') % url_timeout)
-    except requests.exceptions.TooManyRedirects as e:
+    except requests.exceptions.TooManyRedirects:
         raise LinkHeadRequestError(_('Too many redirects'))
     except requests.exceptions.RequestException as e:
         raise LinkHeadRequestError(_('Error during request: %s') % e)
