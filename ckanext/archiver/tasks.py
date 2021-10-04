@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 from builtins import str
-from future import standard_library
 import os
 import hashlib
 import http.client
@@ -16,9 +15,7 @@ import routes
 import time
 
 from requests.packages import urllib3
-
-standard_library.install_aliases()  # noqa
-from urllib.parse import urlparse, urljoin, quote, urlunparse
+from future.moves.urllib.parse import urlparse, urljoin, quote, urlunparse
 
 from ckan.common import _
 from ckan.lib import uploader
@@ -622,7 +619,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
                     'ckanext-archiver.cache_url_root in config')
         raise ArchiveError(_('No value for ckanext-archiver.cache_url_root in config'))
     cache_url = urljoin(str(context['cache_url_root']),
-                                     '%s/%s' % (str(relative_archive_path), str(file_name)))
+                        '%s/%s' % (str(relative_archive_path), str(file_name)))
     return {'cache_filepath': saved_file,
             'cache_url': cache_url}
 
