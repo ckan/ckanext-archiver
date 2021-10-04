@@ -395,8 +395,8 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
             # from the previous download (i.e. not when we tried it as an API)
 
         if not try_as_api or not Status.is_ok(download_status_id):
-            extra_args = [e.url_redirected_to] if 'url_redirected_to' in err else []
-            _save(download_status_id, e, resource, *extra_args)
+            extra_args = [err.url_redirected_to] if 'url_redirected_to' in err else []
+            _save(download_status_id, err, resource, *extra_args)
             return
 
     if not requires_archive:
