@@ -351,25 +351,30 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         'previous': Archival.get_for_resource(resource_id)
         }
 
-    e = None
+    err = None
     try:
         download_result = download(context, resource)
     except NotChanged as e:
         download_status_id = Status.by_text('Content has not changed')
         try_as_api = False
         requires_archive = False
+        err = e
     except LinkInvalidError as e:
         download_status_id = Status.by_text('URL invalid')
         try_as_api = False
+        err = e
     except DownloadException as e:
         download_status_id = Status.by_text('Download error')
         try_as_api = True
+        err = e
     except DownloadError as e:
         download_status_id = Status.by_text('Download error')
         try_as_api = True
+        err = e
     except ChooseNotToDownload as e:
         download_status_id = Status.by_text('Chose not to download')
         try_as_api = False
+        err = e
     except Exception as e:
         if os.environ.get('DEBUG'):
             raise
@@ -377,9 +382,9 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         _save(Status.by_text('Download failure'), e, resource)
         return
 
-    if not Status.is_ok(download_status_id) and e:
+    if not Status.is_ok(download_status_id) and err:
         log.info('GET error: %s - %r, %r "%s"',
-                 Status.by_id(download_status_id), e, e.args,
+                 Status.by_id(download_status_id), err, err.args,
                  resource.get('url'))
 
         if try_as_api:
@@ -390,7 +395,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
             # from the previous download (i.e. not when we tried it as an API)
 
         if not try_as_api or not Status.is_ok(download_status_id):
-            extra_args = [e.url_redirected_to] if 'url_redirected_to' in e else []
+            extra_args = [e.url_redirected_to] if 'url_redirected_to' in err else []
             _save(download_status_id, e, resource, *extra_args)
             return
 
