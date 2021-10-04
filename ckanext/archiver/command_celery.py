@@ -1,6 +1,5 @@
 from __future__ import print_function
 from future import standard_library
-standard_library.install_aliases()  # noqa
 import sys
 import os
 
@@ -9,6 +8,8 @@ import configparser
 from celery import Celery
 
 from ckan.lib.cli import CkanCommand
+
+standard_library.install_aliases()  # noqa
 
 
 class CeleryCmd(CkanCommand):

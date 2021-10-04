@@ -1,6 +1,5 @@
 from __future__ import print_function
 from future import standard_library
-standard_library.install_aliases()  # noqa
 import logging
 import os
 import shutil
@@ -38,6 +37,7 @@ from ckanext.archiver.tasks import (link_checker,
                                     )
 
 from mock_remote_server import MockEchoTestServer, MockWmsServer, MockWfsServer
+standard_library.install_aliases()  # noqa
 
 
 # enable celery logging for when you run nosetests -s

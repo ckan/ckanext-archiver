@@ -3,7 +3,6 @@ An HTTP server that listens on localhost and returns a variety of responses for
 mocking remote servers.
 """
 from future import standard_library
-standard_library.install_aliases()  # noqa
 from builtins import str
 from builtins import range
 from builtins import object
@@ -17,6 +16,7 @@ import urllib.parse
 import socket
 import os
 from functools import reduce
+standard_library.install_aliases()  # noqa
 
 
 class MockHTTPServer(object):

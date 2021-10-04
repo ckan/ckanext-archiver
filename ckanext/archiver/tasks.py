@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from builtins import str
 from future import standard_library
-standard_library.install_aliases()  # noqa
 import os
 import hashlib
 import http.client
@@ -36,6 +35,8 @@ toolkit = p.toolkit
 ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
+
+standard_library.install_aliases()  # noqa
 
 # CKAN 2.7 introduces new jobs system
 if p.toolkit.check_ckan_version(max_version='2.6.99'):
