@@ -6,10 +6,6 @@ import hashlib
 import http.client
 import requests
 import json
-import urllib.request
-import urllib.parse
-import urllib.error
-import urllib.parse
 import tempfile
 import shutil
 import datetime
@@ -20,6 +16,9 @@ import routes
 import time
 
 from requests.packages import urllib3
+
+standard_library.install_aliases()  # noqa
+from urllib.parse import urlparse, urljoin, quote, urlunparse
 
 from ckan.common import _
 from ckan.lib import uploader
@@ -35,8 +34,6 @@ toolkit = p.toolkit
 ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
-
-standard_library.install_aliases()  # noqa
 
 # CKAN 2.7 introduces new jobs system
 if p.toolkit.check_ckan_version(max_version='2.6.99'):
@@ -68,7 +65,7 @@ def load_config(ckan_ini_filepath):
                                              conf.local_conf)
 
     # give routes enough information to run url_for
-    parsed = urllib.parse.urlparse(conf.get('ckan.site_url', 'http://0.0.0.0'))
+    parsed = urlparse(conf.get('ckan.site_url', 'http://0.0.0.0'))
     request_config = routes.request_config()
     request_config.host = parsed.netloc + parsed.path
     request_config.protocol = parsed.scheme
@@ -302,7 +299,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         upload = uploader.get_resource_uploader(resource)
         filepath = upload.get_path(resource['id'])
 
-        hosted_externally = not url.startswith(config['ckan.site_url']) or urllib.parse.urlparse(filepath).scheme != ''
+        hosted_externally = not url.startswith(config['ckan.site_url']) or urlparse(filepath).scheme != ''
         # if resource.get('resource_type') == 'file.upload' and not hosted_externally:
         if not hosted_externally:
             log.info("Won't attemp to archive resource uploaded locally: %s" % resource['url'])
@@ -600,7 +597,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
     if not os.path.exists(archive_dir):
         os.makedirs(archive_dir)
     # try to get a file name from the url
-    parsed_url = urllib.parse.urlparse(resource.get('url'))
+    parsed_url = urlparse(resource.get('url'))
     try:
         file_name = parsed_url.path.split('/')[-1] or 'resource'
         file_name = file_name.strip()  # trailing spaces cause problems
@@ -624,7 +621,7 @@ def archive_resource(context, resource, log, result=None, url_timeout=30):
         log.warning('Not saved cache_url because no value for '
                     'ckanext-archiver.cache_url_root in config')
         raise ArchiveError(_('No value for ckanext-archiver.cache_url_root in config'))
-    cache_url = urllib.parse.urljoin(str(context['cache_url_root']),
+    cache_url = urljoin(str(context['cache_url_root']),
                                      '%s/%s' % (str(relative_archive_path), str(file_name)))
     return {'cache_filepath': saved_file,
             'cache_url': cache_url}
@@ -695,10 +692,10 @@ def tidy_url(url):
     try:
         url = url.decode('ascii')
     except Exception:
-        parts = list(urllib.parse.urlparse(url))
-        parts[2] = urllib.parse.quote(parts[2].encode('utf-8'))
-        parts[1] = urllib.parse.quote(parts[1].encode('utf-8'))
-        url = urllib.parse.urlunparse(parts)
+        parts = list(urlparse(url))
+        parts[2] = quote(parts[2].encode('utf-8'))
+        parts[1] = quote(parts[1].encode('utf-8'))
+        url = urlunparse(parts)
     url = str(url)
 
     # strip whitespace from url
