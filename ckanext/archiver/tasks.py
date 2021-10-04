@@ -349,6 +349,8 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         'cache_url_root': config.get('ckanext-archiver.cache_url_root'),
         'previous': Archival.get_for_resource(resource_id)
         }
+
+    e = None
     try:
         download_result = download(context, resource)
     except NotChanged as e:
@@ -374,7 +376,7 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         _save(Status.by_text('Download failure'), e, resource)
         return
 
-    if not Status.is_ok(download_status_id):
+    if not Status.is_ok(download_status_id) and e:
         log.info('GET error: %s - %r, %r "%s"',
                  Status.by_id(download_status_id), e, e.args,
                  resource.get('url'))
