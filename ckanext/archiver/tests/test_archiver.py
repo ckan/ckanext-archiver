@@ -1,5 +1,4 @@
 from __future__ import print_function
-from future import standard_library
 import logging
 import os
 import shutil
@@ -8,7 +7,7 @@ from functools import wraps
 import json
 import mock
 
-from urllib.parse import quote_plus
+from future.moves.urllib.parse import quote_plus
 from pylons import config
 import pytest
 
@@ -37,7 +36,6 @@ from ckanext.archiver.tasks import (link_checker,
                                     )
 
 from mock_remote_server import MockEchoTestServer, MockWmsServer, MockWfsServer
-standard_library.install_aliases()  # noqa
 
 
 # enable celery logging for when you run nosetests -s
