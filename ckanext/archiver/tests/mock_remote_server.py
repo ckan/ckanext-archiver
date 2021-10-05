@@ -2,7 +2,6 @@
 An HTTP server that listens on localhost and returns a variety of responses for
 mocking remote servers.
 """
-from future import standard_library
 from builtins import str
 from builtins import range
 from builtins import object
@@ -10,13 +9,10 @@ from contextlib import contextmanager
 from threading import Thread
 from time import sleep
 from wsgiref.simple_server import make_server
-import urllib.request
-import urllib.error
-import urllib.parse
+from future.moves.urllib.request import urlopen
 import socket
 import os
 from functools import reduce
-standard_library.install_aliases()  # noqa
 
 
 class MockHTTPServer(object):
@@ -28,7 +24,7 @@ class MockHTTPServer(object):
     a separate thread, eg::
 
         >>> with MockTestServer().serve() as server_address:
-        ...     urllib2.urlopen(server_address)
+        ...     urlopen(server_address)
         ...
 
     Subclass this and override __call__ to provide your own WSGI handler function.
@@ -46,7 +42,7 @@ class MockHTTPServer(object):
         This uses context manager to make sure the server is stopped::
 
             >>> with MockTestServer().serve() as addr:
-            ...     print urllib2.urlopen('%s/?content=hello+world').read()
+            ...     print urlopen('%s/?content=hello+world').read()
             ...
             'hello world'
         """
@@ -77,7 +73,7 @@ class MockHTTPServer(object):
             # call completes. Set a very small timeout as we don't actually need to
             # wait for a response. We don't care about exceptions here either.
             try:
-                urllib.request.urlopen("http://%s:%s/" % (host, port), timeout=0.01)
+                urlopen("http://%s:%s/" % (host, port), timeout=0.01)
             except Exception:
                 pass
 
