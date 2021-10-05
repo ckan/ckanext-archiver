@@ -14,12 +14,7 @@ import pytest
 from ckan import model
 from ckan import plugins
 from ckan.logic import get_action
-try:
-    from ckan.tests import factories as ckan_factories
-    from ckan.tests.legacy import BaseCase
-except ImportError:
-    from ckan.new_tests import factories as ckan_factories
-    from ckan.tests import BaseCase
+from ckan.tests import factories as ckan_factories
 
 from ckanext.archiver import model as archiver_model
 from ckanext.archiver.model import Archival
@@ -63,7 +58,7 @@ def with_mock_url(url=''):
     return decorator
 
 
-class TestLinkChecker(BaseCase):
+class TestLinkChecker:
     """
     Tests for link checker task
     """
@@ -160,7 +155,7 @@ class TestLinkChecker(BaseCase):
         assert result
 
 
-class TestArchiver(BaseCase):
+class TestArchiver:
     """
     Tests for Archiver 'update_resource'/'update_package' tasks
     """
@@ -362,7 +357,7 @@ class TestArchiver(BaseCase):
         assert params.get('resource_id') is None
 
 
-class TestDownload(BaseCase):
+class TestDownload:
     '''Tests of the download method (and things it calls).
 
     Doesn't need a fake CKAN to get/set the status of.

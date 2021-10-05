@@ -1,9 +1,6 @@
 from builtins import object
 import ckanext.archiver.model as archiver_model
-try:
-    from ckan.tests import factories as ckan_factories
-except ImportError:
-    from ckan.new_tests import factories as ckan_factories
+from ckan.tests import factories as ckan_factories
 from ckan import model
 import pytest
 
