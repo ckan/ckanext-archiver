@@ -633,7 +633,7 @@ def get_plugins_waiting_on_ipipe():
 
 
 def verify_https():
-    from toolkit import config
+    from ckan.plugins.toolkit import config
     return toolkit.asbool(config.get('ckanext-archiver.verify_https', True))
 
 
