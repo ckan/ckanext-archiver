@@ -30,7 +30,7 @@ from ckanext.archiver.tasks import (link_checker,
                                     response_is_an_api_error
                                     )
 
-from mock_remote_server import MockEchoTestServer, MockWmsServer, MockWfsServer
+from ckanext.archiver.tests.mock_remote_server import MockEchoTestServer, MockWmsServer, MockWfsServer
 
 
 # enable celery logging for when you run nosetests -s
