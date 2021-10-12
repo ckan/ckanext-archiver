@@ -1,5 +1,4 @@
 from builtins import str
-import os
 import logging
 import ckan.plugins as p
 
