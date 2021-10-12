@@ -11,7 +11,6 @@ import datetime
 import copy
 import mimetypes
 import re
-import routes
 import time
 
 from requests.packages import urllib3
@@ -51,21 +50,6 @@ if p.toolkit.check_ckan_version(max_version='2.6.99'):
     @celery.task(name="archiver.link_checker")
     def link_checker_celery(*args, **kwargs):
         link_checker(*args, **kwargs)
-
-
-def load_config(ckan_ini_filepath):
-    import paste.deploy
-    config_abs_path = os.path.abspath(ckan_ini_filepath)
-    conf = paste.deploy.appconfig('config:' + config_abs_path)
-    import ckan
-    ckan.config.environment.load_environment(conf.global_conf,
-                                             conf.local_conf)
-
-    # give routes enough information to run url_for
-    parsed = urlparse(conf.get('ckan.site_url', 'http://0.0.0.0'))
-    request_config = routes.request_config()
-    request_config.host = parsed.netloc + parsed.path
-    request_config.protocol = parsed.scheme
 
 
 def register_translator():
@@ -140,7 +124,7 @@ def update_resource(ckan_ini_filepath, resource_id, queue='bulk'):
     '''
     Archive a resource.
     '''
-    load_config(ckan_ini_filepath)
+    toolkit.load_config(ckan_ini_filepath)
     register_translator()
 
     log.info('Starting update_resource task: res_id=%r queue=%s', resource_id, queue)
@@ -167,7 +151,7 @@ def update_package(ckan_ini_filepath, package_id, queue='bulk'):
     '''
     Archive a package.
     '''
-    load_config(ckan_ini_filepath)
+    toolkit.load_config(ckan_ini_filepath)
     register_translator()
 
     log.info('Starting update_package task: package_id=%r queue=%s',
@@ -254,11 +238,10 @@ def _update_resource(ckan_ini_filepath, resource_id, queue, log):
         }
     If not successful, returns None.
     """
-    load_config(ckan_ini_filepath)
+    toolkit.load_config(ckan_ini_filepath)
 
     from ckan import model
-    from pylons import config
-    from ckan.plugins import toolkit
+    from ckan.plugins.toolkit import config
     from ckanext.archiver import default_settings as settings
     from ckanext.archiver.model import Status, Archival
 
