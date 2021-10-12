@@ -85,7 +85,7 @@ class TestLinkChecker:
 
     @with_mock_url('+/http://www.homeoffice.gov.uk/publications/science-research-statistics/research-statistics/'
                    'drugs-alcohol-research/hosb1310/hosb1310-ann2tabs?view=Binary')
-    def test_non_escaped_url(self, url):
+    def test_non_escaped_url(self, url=None):
         context = json.dumps({})
         data = json.dumps({'url': url})
         res = link_checker(context, data)
@@ -99,28 +99,28 @@ class TestLinkChecker:
             link_checker(context, data)
 
     @with_mock_url('?status=503')
-    def test_url_with_503(self, url):
+    def test_url_with_503(self, url=None):
         context = json.dumps({})
         data = json.dumps({'url': url})
         with pytest.raises(LinkCheckerError):
             link_checker(context, data)
 
     @with_mock_url('?status=404')
-    def test_url_with_404(self, url):
+    def test_url_with_404(self, url=None):
         context = json.dumps({})
         data = json.dumps({'url': url})
         with pytest.raises(LinkCheckerError):
             link_checker(context, data)
 
     @with_mock_url('?status=405')
-    def test_url_with_405(self, url):  # 405: method (HEAD) not allowed
+    def test_url_with_405(self, url=None):  # 405: method (HEAD) not allowed
         context = json.dumps({})
         data = json.dumps({'url': url})
         with pytest.raises(LinkCheckerError):
             link_checker(context, data)
 
     @with_mock_url('')
-    def test_url_with_30x_follows_redirect(self, url):
+    def test_url_with_30x_follows_redirect(self, url=None):
         redirect_url = url + u'?status=200&content=test&content-type=text/csv'
         url += u'?status=301&location=%s' % quote_plus(redirect_url)
         context = json.dumps({})
@@ -131,7 +131,7 @@ class TestLinkChecker:
     # e.g. "http://www.dasa.mod.uk/applications/newWeb/www/index.php?page=48&thiscontent=180&date=2011-05-26
     # &pubType=1&PublishTime=09:30:00&from=home&tabOption=1"
     @with_mock_url('?time=09:30&status=200')
-    def test_colon_in_query_string(self, url):
+    def test_colon_in_query_string(self, url=None):
         # accept, because browsers accept this
         # see discussion: http://trac.ckan.org/ticket/318
         context = json.dumps({})
@@ -140,7 +140,7 @@ class TestLinkChecker:
         assert result
 
     @with_mock_url('?status=200 ')
-    def test_trailing_whitespace(self, url):
+    def test_trailing_whitespace(self, url=None):
         # accept, because browsers accept this
         context = json.dumps({})
         data = json.dumps({'url': url})
@@ -148,7 +148,7 @@ class TestLinkChecker:
         assert result
 
     @with_mock_url('?status=200')
-    def test_good_url(self, url):
+    def test_good_url(self, url=None):
         context = json.dumps({})
         data = json.dumps({'url': url})
         result = json.loads(link_checker(context, data))
@@ -196,7 +196,7 @@ class TestArchiver:
         self.assert_archival_error('URL parsing failure', res_id)
 
     @with_mock_url('?status=200&content=test&content-type=csv')
-    def test_resource_hash_and_content_length(self, url):
+    def test_resource_hash_and_content_length(self, url=None):
         res_id = self._test_resource(url)['id']
         result = json.loads(update_resource(res_id))
         assert result['size'] == len('test')
@@ -205,7 +205,7 @@ class TestArchiver:
         _remove_archived_file(result.get('cache_filepath'))
 
     @with_mock_url('?status=200&content=test&content-type=csv')
-    def test_archived_file(self, url):
+    def test_archived_file(self, url=None):
         res_id = self._test_resource(url)['id']
         result = json.loads(update_resource(res_id))
 
@@ -220,7 +220,7 @@ class TestArchiver:
         _remove_archived_file(result.get('cache_filepath'))
 
     @with_mock_url('?content-type=application/foo&content=test')
-    def test_update_url_with_unknown_content_type(self, url):
+    def test_update_url_with_unknown_content_type(self, url=None):
         res_id = self._test_resource(url, format='foo')['id']  # format has no effect
         result = json.loads(update_resource(res_id))
         assert result, result
@@ -238,7 +238,7 @@ class TestArchiver:
         _remove_archived_file(result.get('cache_filepath'))
 
     @with_mock_url('?status=200&content-type=csv')
-    def test_update_with_zero_length(self, url):
+    def test_update_with_zero_length(self, url=None):
         # i.e. no content
         res_id = self._test_resource(url)['id']
         result = update_resource(res_id)
@@ -246,21 +246,21 @@ class TestArchiver:
         self.assert_archival_error('Content-length after streaming was 0', res_id)
 
     @with_mock_url('?status=404&content=test&content-type=csv')
-    def test_file_not_found(self, url):
+    def test_file_not_found(self, url=None):
         res_id = self._test_resource(url)['id']
         result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('Server reported status error: 404 Not Found', res_id)
 
     @with_mock_url('?status=500&content=test&content-type=csv')
-    def test_server_error(self, url):
+    def test_server_error(self, url=None):
         res_id = self._test_resource(url)['id']
         result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('Server reported status error: 500 Internal Server Error', res_id)
 
     @with_mock_url('?status=200&content=short&length=1000001&content-type=csv')
-    def test_file_too_large_1(self, url):
+    def test_file_too_large_1(self, url=None):
         # will stop after receiving the header
         res_id = self._test_resource(url)['id']
         result = update_resource(res_id)
@@ -268,7 +268,7 @@ class TestArchiver:
         self.assert_archival_error('Content-length 1000001 exceeds maximum allowed value 1000000', res_id)
 
     @with_mock_url('?status=200&content_long=test_contents_greater_than_the_max_length&no-content-length&content-type=csv')
-    def test_file_too_large_2(self, url):
+    def test_file_too_large_2(self, url=None):
         # no size info in headers - it stops only after downloading the content
         res_id = self._test_resource(url)['id']
         result = update_resource(res_id)
@@ -276,13 +276,13 @@ class TestArchiver:
         self.assert_archival_error('Content-length 1000001 exceeds maximum allowed value 1000000', res_id)
 
     @with_mock_url('?status=200&content=content&length=abc&content-type=csv')
-    def test_content_length_not_integer(self, url):
+    def test_content_length_not_integer(self, url=None):
         res_id = self._test_resource(url)['id']
         result = json.loads(update_resource(res_id))
         assert result, result
 
     @with_mock_url('?status=200&content=content&repeat-length&content-type=csv')
-    def test_content_length_repeated(self, url):
+    def test_content_length_repeated(self, url=None):
         # listing the Content-Length header twice causes requests to
         # store the value as a comma-separated list
         res_id = self._test_resource(url)['id']
@@ -290,7 +290,7 @@ class TestArchiver:
         assert result, result
 
     @with_mock_url('')
-    def test_url_with_30x_follows_and_records_redirect(self, url):
+    def test_url_with_30x_follows_and_records_redirect(self, url=None):
         redirect_url = url + u'?status=200&content=test&content-type=text/csv'
         url += u'?status=301&location=%s' % quote_plus(redirect_url)
         res_id = self._test_resource(url)['id']
@@ -299,7 +299,7 @@ class TestArchiver:
         assert result['url_redirected_to'] == redirect_url
 
     @with_mock_url('?status=200&content=test&content-type=csv')
-    def test_ipipe_notified(self, url):
+    def test_ipipe_notified(self, url=None):
         testipipe = plugins.get_plugin('testipipe')
         testipipe.reset()
 
@@ -318,7 +318,7 @@ class TestArchiver:
     @pytest.mark.skipif(plugins.toolkit.check_ckan_version(min_version='2.7.0'), reason='2.7 has deprecated celery')
     @with_mock_url('?status=200&content=test&content-type=csv')
     @mock.patch('ckan.lib.celery_app.celery.send_task')
-    def test_package_achived_when_resource_modified(self, url, send_task):
+    def test_package_achived_when_resource_modified(self, send_task, url=None):
         data_dict = self._test_resource(url)
         data_dict['url'] = 'http://example.com/foo'
         context = {'model': model,
@@ -333,7 +333,7 @@ class TestArchiver:
         assert args == ('archiver.update_package',)
 
     @with_mock_url('?status=200&content=test&content-type=csv')
-    def test_ipipe_notified_dataset(self, url):
+    def test_ipipe_notified_dataset(self, url=None):
         testipipe = plugins.get_plugin('testipipe')
         testipipe.reset()
 
@@ -379,7 +379,7 @@ class TestDownload:
         return pkg['resources'][0]
 
     @with_mock_url('?status=200&method=get&content=test&content-type=csv')
-    def test_head_unsupported(self, url):
+    def test_head_unsupported(self, url=None):
         # This test was more relevant when we did HEAD requests. Now servers
         # which respond badly to HEAD requests are not an issue.
         resource = self._test_resource(url)
@@ -390,7 +390,7 @@ class TestDownload:
         assert result['saved_file']
 
     @with_mock_url('?status=200&content=test&content-type=csv')
-    def test_download_file(self, url):
+    def test_download_file(self, url=None):
         resource = self._test_resource(url)
 
         result = download(self.fake_context, resource)
