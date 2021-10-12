@@ -9,6 +9,7 @@ from ckanext.archiver.logic import action, auth
 from ckanext.archiver import helpers
 from ckanext.archiver import lib
 from ckanext.archiver.model import Archival, aggregate_archivals_for_a_dataset
+from ckanext.archiver import cli
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,9 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
     p.implements(p.IAuthFunctions)
     p.implements(p.ITemplateHelpers)
     p.implements(p.IPackageController, inherit=True)
+
+    if p.toolkit.check_ckan_version(min_version='2.9.0'):
+        p.implements(p.IClick)
 
     # IDomainObjectModification
 
@@ -204,6 +208,11 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
                 del archival_dict['package_id']
                 del archival_dict['resource_id']
                 res['archiver'] = archival_dict
+
+    # IClick
+
+    def get_commands(self):
+        return cli.get_commands()
 
 
 class TestIPipePlugin(p.SingletonPlugin):
