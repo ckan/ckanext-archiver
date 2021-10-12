@@ -1,21 +1,6 @@
 from __future__ import print_function
-from builtins import input
-from builtins import str
 import logging
-import os
 import sys
-import time
-import re
-import shutil
-import itertools
-import ckan.plugins as p
-
-from ckan.plugins.toolkit import config
-try:
-    from collections import OrderedDict  # from python 2.7
-except ImportError:
-    from sqlalchemy.util import OrderedDict
-from sqlalchemy.sql import func
 
 from ckan.lib.cli import CkanCommand
 
@@ -162,8 +147,6 @@ class Archiver(CkanCommand):
     def update_test(self):
         utils.update_test(self.args[1:], self.options.queue)
         self.log.info('Completed test update')
-
-
 
     def clean_status(self):
         utils.clean_status()

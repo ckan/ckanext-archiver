@@ -3,7 +3,6 @@ import logging
 import sys
 from datetime import time
 
-import click
 import os
 import re
 import shutil
@@ -20,10 +19,11 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
 def update(identifiers, queue):
     from ckanext.archiver import lib
     for pkg_or_res, is_pkg, num_resources_for_pkg, pkg_for_res in \
-        _get_packages_and_resources_in_args(identifiers, queue):
+            _get_packages_and_resources_in_args(identifiers, queue):
         if is_pkg:
             package = pkg_or_res
             log.info('Queuing dataset %s (%s resources)', package.name, num_resources_for_pkg)
@@ -127,12 +127,13 @@ def _get_packages_and_resources_in_args(identifiers, queue):
             package = resource.package
         yield resource, False, None, package
 
+
 def update_test(identifiers, queue):
     from ckanext.archiver import tasks
     # Prevent it loading config again
     tasks.load_config = lambda x: None
     for pkg_or_res, is_pkg, num_resources_for_pkg, pkg_for_res in \
-        _get_packages_and_resources_in_args(identifiers):
+            _get_packages_and_resources_in_args(identifiers):
         if is_pkg:
             package = pkg_or_res
             log.info('Archiving dataset %s (%s resources)', package.name, num_resources_for_pkg)
@@ -142,6 +143,7 @@ def update_test(identifiers, queue):
             package = pkg_for_res
             log.info('Queuing resource %s/%s', package.name, resource.id)
             tasks._update_resource(resource.id, queue, log)
+
 
 def init():
     import ckan.model as model
@@ -170,6 +172,7 @@ def view(package_ref=None):
             for archival in a_q.filter_by(resource_id=res.id):
                 print('* %r' % archival)
 
+
 def clean_status():
     from ckan import model
     from ckanext.archiver.model import Archival
@@ -183,6 +186,7 @@ def clean_status():
 
     print('After:')
     view()
+
 
 def clean_cached_resources():
     from ckan import model
@@ -210,6 +214,7 @@ def clean_cached_resources():
 
     print('After:')
     view()
+
 
 def report(output_file, delete=False):
     """
@@ -345,6 +350,7 @@ def migrate():
             model.Session.commit()
     log.info("Migrations complete")
 
+
 def migrate_archiver_dirs():
     from ckan import model
     from ckan.logic import get_action
@@ -357,7 +363,7 @@ def migrate_archiver_dirs():
     old_dir_regex = re.compile(r'(.*)/([a-f0-9\-]+)/([^/]*)$')
     new_dir_regex = re.compile(r'(.*)/[a-f0-9]{2}/[a-f0-9\-]{36}/[^/]*$')
     for resource in model.Session.query(model.Resource). \
-        filter(model.Resource.state != model.State.DELETED):
+            filter(model.Resource.state != model.State.DELETED):
         if not resource.cache_url or resource.cache_url == 'None':
             continue
         if new_dir_regex.match(resource.cache_url):
@@ -420,6 +426,7 @@ def migrate_archiver_dirs():
         else:
             print('ERROR updating resource: %r' % result)
 
+
 def size_report():
     from ckan import model
     from ckanext.archiver.model import Archival
@@ -466,6 +473,7 @@ def size_report():
         print('{:>15}{:>10,}{:>20,}'.format(size_bin[1], count, total_size))
         previous_bin = size_bin
     print('Totals: {:,} {:,}'.format(sum(counts), sum(total_sizes)))
+
 
 def delete_files_larger_than_max_content_length():
     from ckan import model
