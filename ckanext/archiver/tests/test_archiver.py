@@ -8,7 +8,7 @@ import json
 import mock
 
 from future.moves.urllib.parse import quote_plus
-from pylons import config
+from ckan.plugins.toolkit import config
 import pytest
 
 from ckan import model
