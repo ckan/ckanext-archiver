@@ -52,20 +52,6 @@ if p.toolkit.check_ckan_version(max_version='2.6.99'):
         link_checker(*args, **kwargs)
 
 
-def register_translator():
-    # Register a translator in this thread so that
-    # the _() functions in logic layer can work
-    from paste.registry import Registry
-    from pylons import translator
-    from ckan.lib.cli import MockTranslator
-    global registry
-    registry = Registry()
-    registry.prepare()
-    global translator_obj
-    translator_obj = MockTranslator()
-    registry.register(translator, translator_obj)
-
-
 class ArchiverError(Exception):
     pass
 
@@ -124,7 +110,6 @@ def update_resource(resource_id, queue='bulk'):
     '''
     Archive a resource.
     '''
-    register_translator()
 
     log.info('Starting update_resource task: res_id=%r queue=%s', resource_id, queue)
 
@@ -150,8 +135,6 @@ def update_package(package_id, queue='bulk'):
     '''
     Archive a package.
     '''
-
-    register_translator()
 
     log.info('Starting update_package task: package_id=%r queue=%s',
              package_id, queue)
