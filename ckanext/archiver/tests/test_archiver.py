@@ -165,7 +165,6 @@ class TestArchiver:
     def initial_data(cls, clean_db):
         archiver_model.init_tables(model.meta.engine)
         cls.temp_dir = tempfile.mkdtemp()
-        cls.config = config.__file__
 
     def _test_package(self, url, format=None):
         pkg = {'resources': [
@@ -186,20 +185,20 @@ class TestArchiver:
 
     def test_file_url(self):
         res_id = self._test_resource('file:///home/root/test.txt')['id']  # scheme not allowed
-        result = update_resource(self.config, res_id)
+        result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('Invalid url scheme', res_id)
 
     def test_bad_url(self):
         res_id = self._test_resource('http:host.com')['id']  # no slashes
-        result = update_resource(self.config, res_id)
+        result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('URL parsing failure', res_id)
 
     @with_mock_url('?status=200&content=test&content-type=csv')
     def test_resource_hash_and_content_length(self, url):
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(self.config, res_id))
+        result = json.loads(update_resource(res_id))
         assert result['size'] == len('test')
         from hashlib import sha1
         assert result['hash'] == sha1('test').hexdigest(), result
@@ -208,7 +207,7 @@ class TestArchiver:
     @with_mock_url('?status=200&content=test&content-type=csv')
     def test_archived_file(self, url):
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(self.config, res_id))
+        result = json.loads(update_resource(res_id))
 
         assert result['cache_filepath']
         assert os.path.exists(result['cache_filepath'])
@@ -223,14 +222,14 @@ class TestArchiver:
     @with_mock_url('?content-type=application/foo&content=test')
     def test_update_url_with_unknown_content_type(self, url):
         res_id = self._test_resource(url, format='foo')['id']  # format has no effect
-        result = json.loads(update_resource(self.config, res_id))
+        result = json.loads(update_resource(res_id))
         assert result, result
         assert result['mimetype'] == 'application/foo'  # stored from the header
 
     def test_wms_1_3(self):
         with MockWmsServer(wms_version='1.3').serve() as url:
             res_id = self._test_resource(url)['id']
-            result = json.loads(update_resource(self.config, res_id))
+            result = json.loads(update_resource(res_id))
             assert result, result
             assert result['request_type'] == 'WMS 1.3'
         with open(result['cache_filepath']) as f:
@@ -242,21 +241,21 @@ class TestArchiver:
     def test_update_with_zero_length(self, url):
         # i.e. no content
         res_id = self._test_resource(url)['id']
-        result = update_resource(self.config, res_id)
+        result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('Content-length after streaming was 0', res_id)
 
     @with_mock_url('?status=404&content=test&content-type=csv')
     def test_file_not_found(self, url):
         res_id = self._test_resource(url)['id']
-        result = update_resource(self.config, res_id)
+        result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('Server reported status error: 404 Not Found', res_id)
 
     @with_mock_url('?status=500&content=test&content-type=csv')
     def test_server_error(self, url):
         res_id = self._test_resource(url)['id']
-        result = update_resource(self.config, res_id)
+        result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('Server reported status error: 500 Internal Server Error', res_id)
 
@@ -264,7 +263,7 @@ class TestArchiver:
     def test_file_too_large_1(self, url):
         # will stop after receiving the header
         res_id = self._test_resource(url)['id']
-        result = update_resource(self.config, res_id)
+        result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('Content-length 1000001 exceeds maximum allowed value 1000000', res_id)
 
@@ -272,14 +271,14 @@ class TestArchiver:
     def test_file_too_large_2(self, url):
         # no size info in headers - it stops only after downloading the content
         res_id = self._test_resource(url)['id']
-        result = update_resource(self.config, res_id)
+        result = update_resource(res_id)
         assert not result, result
         self.assert_archival_error('Content-length 1000001 exceeds maximum allowed value 1000000', res_id)
 
     @with_mock_url('?status=200&content=content&length=abc&content-type=csv')
     def test_content_length_not_integer(self, url):
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(self.config, res_id))
+        result = json.loads(update_resource(res_id))
         assert result, result
 
     @with_mock_url('?status=200&content=content&repeat-length&content-type=csv')
@@ -287,7 +286,7 @@ class TestArchiver:
         # listing the Content-Length header twice causes requests to
         # store the value as a comma-separated list
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(self.config, res_id))
+        result = json.loads(update_resource(res_id))
         assert result, result
 
     @with_mock_url('')
@@ -295,7 +294,7 @@ class TestArchiver:
         redirect_url = url + u'?status=200&content=test&content-type=text/csv'
         url += u'?status=301&location=%s' % quote_plus(redirect_url)
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(self.config, res_id))
+        result = json.loads(update_resource(res_id))
         assert result
         assert result['url_redirected_to'] == redirect_url
 
@@ -306,7 +305,7 @@ class TestArchiver:
 
         res_id = self._test_resource(url)['id']
 
-        update_resource(self.config, res_id, 'queue1')
+        update_resource(res_id, 'queue1')
 
         assert len(testipipe.calls) == 1
 
@@ -340,7 +339,7 @@ class TestArchiver:
 
         pkg = self._test_package(url)
 
-        update_package(self.config, pkg['id'], 'queue1')
+        update_package(pkg['id'], 'queue1')
 
         assert len(testipipe.calls) == 2, len(testipipe.calls)
 
