@@ -1,3 +1,4 @@
+import itertools
 from builtins import str
 from builtins import object
 import uuid
@@ -48,7 +49,7 @@ class Status(object):
             22: 'Download failure',
             23: 'System error during archival',
         }
-        self._by_id = dict(not_broken, **broken)
+        self._by_id = dict(itertools.chain(not_broken.items(), broken.items()))
         self._by_id.update(not_sure)
         self._by_text = dict((value, key)
                              for key, value in self._by_id.items())
