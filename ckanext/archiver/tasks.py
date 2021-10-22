@@ -481,7 +481,7 @@ def download(context, resource, url_timeout=30,
 
     # continue the download - stream the response body
     def get_content():
-        return res.content
+        return res.text
     log.info('Downloading the body')
     content = requests_wrapper(log, get_content)
 
