@@ -64,6 +64,10 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
             return False
         # therefore operation=changed
 
+        # 2.9 does not have revisions so archive anyway
+        if p.toolkit.check_ckan_version(min_version='2.9.0'):
+            return True
+        
         # check to see if resources are added, deleted or URL changed
 
         # look for the latest revision
