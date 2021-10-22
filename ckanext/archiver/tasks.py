@@ -655,7 +655,6 @@ def tidy_url(url):
     except Exception:
         parts = list(urlparse(url))
         parts[2] = quote(parts[2].encode('utf-8'))
-        parts[1] = quote(parts[1].encode('utf-8'))
         url = urlunparse(parts)
     url = str(url)
 
