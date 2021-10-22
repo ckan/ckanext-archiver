@@ -1,9 +1,5 @@
-.. You should enable this project on travis-ci.org and coveralls.io to make
-   these badges work. The necessary Travis and Coverage config files have been
-   generated for you.
-
-.. image:: https://travis-ci.org/ckan/ckanext-archiver.svg?branch=master
-    :target: https://travis-ci.org/ckan/ckanext-archiver
+.. image:: https://github.com/ckan/ckanext-archiver/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/ckan/ckanext-archiver/actions/workflows/test.yml
 
 =============
 ckanext-archiver
