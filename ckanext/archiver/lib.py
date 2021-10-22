@@ -1,4 +1,4 @@
-import os
+from builtins import str
 import logging
 import ckan.plugins as p
 
@@ -23,25 +23,20 @@ def compat_enqueue(name, fn, queue, args=None):
 
 
 def create_archiver_resource_task(resource, queue):
-    from pylons import config
     if p.toolkit.check_ckan_version(max_version='2.2.99'):
         # earlier CKANs had ResourceGroup
         package = resource.resource_group.package
     else:
         package = resource.package
-    ckan_ini_filepath = os.path.abspath(config['__file__'])
 
-    compat_enqueue('archiver.update_resource', update_resource, queue, [ckan_ini_filepath, resource.id])
+    compat_enqueue('archiver.update_resource', update_resource, queue, [resource.id])
 
     log.debug('Archival of resource put into celery queue %s: %s/%s url=%r',
               queue, package.name, resource.id, resource.url)
 
 
 def create_archiver_package_task(package, queue):
-    from pylons import config
-    ckan_ini_filepath = os.path.abspath(config['__file__'])
-
-    compat_enqueue('archiver.update_package', update_package, queue, [ckan_ini_filepath, package.id])
+    compat_enqueue('archiver.update_package', update_package, queue, [package.id])
 
     log.debug('Archival of package put into celery queue %s: %s',
               queue, package.name)

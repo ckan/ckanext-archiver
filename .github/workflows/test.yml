@@ -49,7 +49,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install requirements
         run: |
-          pip install -r pip-requirements.txt
+          pip install -r requirements.txt
           pip install -r dev-requirements.txt
           pip install -e .
           # Replace default path to CKAN core config file with the one on the container
@@ -65,4 +65,4 @@ jobs:
           paster --plugin=ckan db init -c test.ini
           paster --plugin=ckanext-archiver archiver init -c test.ini
       - name: Run tests
-        run: pytest --ckan-ini=test.ini --cov=ckanext.archiver --disable-warnings tests
+        run: pytest --ckan-ini=test.ini --cov=ckanext.archiver --disable-warnings ckanext/archiver/tests
