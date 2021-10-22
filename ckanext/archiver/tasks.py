@@ -353,7 +353,7 @@ def _update_resource(resource_id, queue, log):
             # from the previous download (i.e. not when we tried it as an API)
 
         if not try_as_api or not Status.is_ok(download_status_id):
-            extra_args = [err.url_redirected_to] if 'url_redirected_to' in err else []
+            extra_args = [err.args.url_redirected_to] if 'url_redirected_to' in err.args else []
             _save(download_status_id, err, resource, *extra_args)
             return
 
