@@ -28,7 +28,7 @@ class IPipe(Interface):
         for observer in plugins.PluginImplementations(cls):
             try:
                 observer.receive_data(operation, queue, **params)
-            except Exception, ex:
+            except Exception as ex:
                 log.exception(ex)
                 # We reraise all exceptions so they are obvious there
                 # is something wrong
