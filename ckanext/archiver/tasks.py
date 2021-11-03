@@ -432,10 +432,13 @@ def download(context, resource, url_timeout=30,
     # start the download - just get the headers
     # May raise DownloadException
     method_func = {'GET': requests.get, 'POST': requests.post}[method]
-    res = requests_wrapper(log, method_func, url, timeout=url_timeout,
-                           stream=True, headers=headers,
-                           verify=verify_https(),
-                           )
+    kwargs = {'timeout': url_timeout, 'stream': True, 'headers': headers,
+              'verify': verify_https()}
+    if 'ckan.download_proxy' in config:
+        download_proxy = config.get('ckan.download_proxy')
+        log.debug('Downloading via proxy %s', download_proxy)
+        kwargs['proxies'] = {'http': download_proxy, 'https': download_proxy}
+    res = requests_wrapper(log, method_func, url, **kwargs)
     url_redirected_to = res.url if url != res.url else None
 
     if context.get('previous') and ('etag' in res.headers):
