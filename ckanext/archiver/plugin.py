@@ -190,6 +190,10 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
     # IPackageController
 
     def after_show(self, context, pkg_dict):
+        """ Old CKAN function name """
+        return self.after_dataset_show(context, pkg_dict)
+
+    def after_dataset_show(self, context, pkg_dict):
         # Insert the archival info into the package_dict so that it is
         # available on the API.
         # When you edit the dataset, these values will not show in the form,

@@ -11,7 +11,7 @@ import datetime
 import copy
 import mimetypes
 import re
-import time
+from time import sleep
 
 from requests.packages import urllib3
 from future.moves.urllib.parse import urlparse, urljoin, quote, urlunparse
@@ -114,7 +114,7 @@ def update_resource(resource_id, queue='bulk'):
     log.info('Starting update_resource task: res_id=%r queue=%s', resource_id, queue)
 
     # HACK because of race condition #1481
-    time.sleep(2)
+    sleep(2)
 
     # Do all work in a sub-routine since it can then be tested without celery.
     # Also put try/except around it is easier to monitor ckan's log rather than
