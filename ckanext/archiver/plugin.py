@@ -8,7 +8,7 @@ from ckanext.archiver.interfaces import IPipe
 from ckanext.archiver.logic import action, auth
 from ckanext.archiver import helpers
 from ckanext.archiver import lib
-from ckanext.archiver.model import Archival
+from ckanext.archiver.model import Archival, aggregate_archivals_for_a_dataset
 from ckanext.archiver import cli
 
 log = logging.getLogger(__name__)
@@ -204,12 +204,9 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
         if not archivals:
             return
 
-        # Archival aggregated information for datasets is not in use
-        # and generates error in SOLR while indexing with
-        # `PackageSearchIndex.index_package`
-        # Validate and delete:
-        # dataset_archival = aggregate_archivals_for_a_dataset(archivals)
-        # pkg_dict['archiver'] = dataset_archival
+        # dataset
+        dataset_archival = aggregate_archivals_for_a_dataset(archivals)
+        pkg_dict['archiver'] = dataset_archival
 
         # resources
         archivals_by_res_id = dict((a.resource_id, a) for a in archivals)
@@ -221,6 +218,13 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
                 del archival_dict['package_id']
                 del archival_dict['resource_id']
                 res['archiver'] = archival_dict
+
+    def before_dataset_index(self, pkg_dict):
+        '''
+        remove `archiver` from index
+        '''
+        pkg_dict.pop('archiver', None)
+        return pkg_dict
 
     # IClick
 
