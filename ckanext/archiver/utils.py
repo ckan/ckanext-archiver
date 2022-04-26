@@ -1,7 +1,7 @@
 import itertools
 import logging
 import sys
-from datetime import time
+from time import sleep
 
 import os
 import re
@@ -26,15 +26,15 @@ def update(identifiers, queue):
             _get_packages_and_resources_in_args(identifiers, queue):
         if is_pkg:
             package = pkg_or_res
-            log.info('Queuing dataset %s (%s resources)', package.name, num_resources_for_pkg)
+            log.info('Queuing dataset %s (%s resources) Q:%s', package.name, num_resources_for_pkg, queue)
             lib.create_archiver_package_task(package, queue)
-            time.sleep(0.1)  # to try to avoid Redis getting overloaded
+            sleep(0.1)  # to try to avoid Redis getting overloaded
         else:
             resource = pkg_or_res
             package = pkg_for_res
             log.info('Queuing resource %s/%s', package.name, resource.id)
             lib.create_archiver_resource_task(resource, queue)
-            time.sleep(0.05)  # to try to avoid Redis getting overloaded
+            sleep(0.05)  # to try to avoid Redis getting overloaded
 
 
 def _get_packages_and_resources_in_args(identifiers, queue):

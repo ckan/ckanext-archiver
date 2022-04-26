@@ -3,7 +3,7 @@
       <li>{% trans %}Broken datasets{% endtrans %}: {{ c.data['num_broken_packages'] }} / {{ c.data['num_packages'] }} ({{ c.data.get('broken_package_percent') }}%)</li>
       <li>{% trans %}Broken links{% endtrans %}: {{ c.data['num_broken_resources'] }} / {{ c.data['num_resources'] }} ({{ c.data.get('broken_resource_percent') }}%)</li>
   </ul>
-  <table class="table table-striped table-bordered table-condensed tablesorter" id="report-table">
+  <table class="table table-striped table-bordered table-condensed" id="report-table">
     <col style="width: 60%" />
     <col style="width: 10%" />
     <col style="width: 10%" />
@@ -13,7 +13,7 @@
       <th class="header">{% trans %}Organization{% endtrans %}</th>
       <th class="header">{% trans %}Broken datasets{% endtrans %}</th>
       <th class="header">{% trans %}Broken links{% endtrans %}</th>
-      <th class="header">{{ _('% Broken links') }}</th>
+      <th class="header">% {% trans %}Broken links{% endtrans %}</th>
     </tr>
    </thead>
    <tbody>
@@ -34,7 +34,7 @@
     <li>{% trans %}Broken datasets{% endtrans %}: {{ c.data['num_broken_packages'] }} / {{ c.data['num_packages'] }} ({{ c.data.get('broken_package_percent') }}%)</li>
     <li>{% trans %}Broken links{% endtrans %}: {{ c.data['num_broken_resources'] }} / {{ c.data['num_resources'] }} ({{ c.data.get('broken_resource_percent') }}%)</li>
   </ul>
-  <table class="table table-striped table-bordered table-condensed tablesorter" id="report-table" style="width: 100%">
+  <table class="table table-striped table-bordered table-condensed" id="report-table" style="width: 100%">
    <thead>
       <tr class="js-tooltip" style="letter-spacing: -1px; font-size: 13px;">
         <th>{% trans %}Dataset{% endtrans %}</th>

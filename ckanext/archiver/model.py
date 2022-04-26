@@ -9,7 +9,6 @@ from sqlalchemy import types
 from sqlalchemy.ext.declarative import declarative_base
 
 import ckan.model as model
-import ckan.plugins as p
 
 from ckan.lib import dictization
 
@@ -151,18 +150,9 @@ class Archival(Base):
     @classmethod
     def create(cls, resource_id):
         c = cls()
+        resource = model.Resource.get(resource_id)
         c.resource_id = resource_id
-
-        # Find the package_id for the resource.
-        dataset = model.Session.query(model.Package)
-        if p.toolkit.check_ckan_version(max_version='2.2.99'):
-            # earlier CKANs had ResourceGroup
-            dataset = dataset.join(model.ResourceGroup)
-        dataset = dataset \
-            .join(model.Resource) \
-            .filter_by(id=resource_id) \
-            .one()
-        c.package_id = dataset.id
+        c.package_id = resource.package_id
         return c
 
     @property
