@@ -3,6 +3,7 @@ Tool to migrate archival data from the TaskStatus and Resource tables to
 the Archival table.
 
 '''
+from __future__ import print_function
 
 from optparse import OptionParser
 import logging
@@ -74,9 +75,9 @@ def migrate(options):
         fields['mimetype'] = res.mimetype
 
         revisions_with_hash = model.Session.query(model.ResourceRevision)\
-                .filter_by(id=res.id)\
-                .order_by(model.ResourceRevision.revision_timestamp)\
-                .filter(model.ResourceRevision.hash != '').all()
+            .filter_by(id=res.id)\
+            .order_by(model.ResourceRevision.revision_timestamp)\
+            .filter(model.ResourceRevision.hash != '').all()
         if revisions_with_hash:
             # these are not perfect by not far off
             fields['created'] = revisions_with_hash[0].revision_timestamp
@@ -94,7 +95,7 @@ def migrate(options):
         archival = Archival.get_for_resource(res.id)
         if archival:
             changed = None
-            for field, value in fields.items():
+            for field, value in list(fields.items()):
                 if getattr(archival, field) != value:
                     if options.write:
                         setattr(archival, field, value)
@@ -106,15 +107,15 @@ def migrate(options):
         else:
             archival = Archival.create(res.id)
             if options.write:
-                for field, value in fields.items():
+                for field, value in list(fields.items()):
                     setattr(archival, field, value)
                 model.Session.add(archival)
             add_stat('Added to archival table', res, stats)
 
-    print 'Summary\n', stats.report()
+    print('Summary\n', stats.report())
     if options.write:
         model.repo.commit_and_remove()
-        print 'Written'
+        print('Written')
 
 
 def add_stat(outcome, res, stats, extra_info=None):
@@ -136,6 +137,7 @@ def date_str_to_datetime_or_none(date_str):
         return date_str_to_datetime(date_str)
     return None
 
+
 if __name__ == '__main__':
     usage = """Tool to migrate archival data from TaskStatus/Resource to Archival table
 
@@ -152,10 +154,10 @@ if __name__ == '__main__':
     if len(args) != 1:
         parser.error('Wrong number of arguments (%i)' % len(args))
     config_ini = args[0]
-    print 'Loading CKAN config...'
+    print('Loading CKAN config...')
     common.load_config(config_ini)
     common.register_translator()
-    print 'Done'
+    print('Done')
     # Setup logging to print debug out for theme stuff only
     rootLogger = logging.getLogger()
     rootLogger.setLevel(logging.WARNING)

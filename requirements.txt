@@ -1,3 +1,4 @@
-celery==3.1.25
-kombu==3.0.37
-progressbar==2.3
+progressbar2==3.53.3
+future
+
+-e git+https://github.com/ckan/ckanext-report.git@master#egg=ckanext-report

@@ -13,11 +13,11 @@ for package in packages:
         package.delete()
         package_stats.increment('deleted')
     else:
-        package_stats.increment('not deleted')    
+        package_stats.increment('not deleted')
 print package_stats.report()
 > deleted: 30
 > not deleted: 70
-    
+
 from running_stats import StatsList
 package_stats = StatsList()
 for package in packages:
@@ -28,12 +28,14 @@ for package in packages:
         package_stats.add('not deleted' package.name)
 print package_stats.report()
 > deleted: 30 pollution-uk, flood-regions, river-quality, ...
-> not deleted: 70 spending-bristol, ... 
+> not deleted: 70 spending-bristol, ...
 
 '''
+from __future__ import print_function
 
 import copy
 import datetime
+
 
 class StatsCount(dict):
     # {category:count}
@@ -45,9 +47,9 @@ class StatsCount(dict):
         super(StatsCount, self).__init__(*args, **kwargs)
 
     def _init_category(self, category):
-        if not self.has_key(category):
+        if category not in self:
             self[category] = copy.deepcopy(self._init_value)
-        
+
     def increment(self, category):
         self._init_category(category)
         self[category] += 1
@@ -63,13 +65,13 @@ class StatsCount(dict):
         lines = []
         indent_str = '\t' * indent
         report_dict = dict()
-        for category in self.keys():
+        for category in list(self.keys()):
             report_dict[category] = self.report_value(category)
 
         if order_by_title:
-            items = sorted(report_dict.iteritems())
+            items = sorted(report_dict.items())
         else:
-            items = sorted(report_dict.iteritems(),
+            items = sorted(iter(report_dict.items()),
                            key=lambda x: -x[1][1])
 
         for category, value_tuple in items:
@@ -83,6 +85,7 @@ class StatsCount(dict):
             lines.append(indent_str + 'Time taken (h:m:s): %s' % time_taken)
         return '\n'.join(lines)
 
+
 class StatsList(StatsCount):
     # {category:[values]}
     _init_value = []
@@ -90,7 +93,7 @@ class StatsList(StatsCount):
     def add(self, category, value):
         self._init_category(category)
         self[category].append(value)
-        return '%s: %s' % (category, value) # so you can log it too
+        return '%s: %s' % (category, value)  # so you can log it too
 
     def report_value(self, category):
         value = self[category]
@@ -100,6 +103,7 @@ class StatsList(StatsCount):
             value_str = value_str[:self.report_value_limit] + '...'
         return (value_str, number_of_values)
 
+
 if __name__ == '__main__':
     package_stats = StatsList()
     package_stats.add('Success', 'good1')
@@ -107,6 +111,6 @@ if __name__ == '__main__':
     package_stats.add('Success', 'good3')
     package_stats.add('Success', 'good4')
     package_stats.add('Failure', 'bad1')
-    print package_stats.report()
+    print(package_stats.report())
 
-    print StatsList().report()
+    print(StatsList().report())

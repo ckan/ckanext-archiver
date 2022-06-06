@@ -1,9 +1,5 @@
-.. You should enable this project on travis-ci.org and coveralls.io to make
-   these badges work. The necessary Travis and Coverage config files have been
-   generated for you.
-
-.. image:: https://travis-ci.org/ckan/ckanext-archiver.svg?branch=master
-    :target: https://travis-ci.org/ckan/ckanext-archiver
+.. image:: https://github.com/ckan/ckanext-archiver/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/ckan/ckanext-archiver/actions/workflows/test.yml
 
 =============
 ckanext-archiver
@@ -296,6 +292,8 @@ However in production you'd run the priority and bulk queues separately, or else
     paster --plugin=ckanext-archiver celeryd2 run bulk -c production.ini
 
 For production use, we recommend setting up Celery to run with supervisord. `apt-get install supervisor` and use `bin/celery-supervisor.conf` as a configuration template.
+
+If you are running CKAN 2.7 or higher, configure job workers instead http://docs.ckan.org/en/2.8/maintaining/background-tasks.html#using-supervisor
 
 An archival can be triggered by adding a dataset with a resource or updating a resource URL. Alternatively you can run::
 

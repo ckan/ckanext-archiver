@@ -9,6 +9,7 @@ from ckanext.archiver.logic import action, auth
 from ckanext.archiver import helpers
 from ckanext.archiver import lib
 from ckanext.archiver.model import Archival, aggregate_archivals_for_a_dataset
+from ckanext.archiver import cli
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,9 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
     p.implements(p.IAuthFunctions)
     p.implements(p.ITemplateHelpers)
     p.implements(p.IPackageController, inherit=True)
+
+    if p.toolkit.check_ckan_version(min_version='2.9.0'):
+        p.implements(p.IClick)
 
     # IDomainObjectModification
 
@@ -60,6 +64,10 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
             return False
         # therefore operation=changed
 
+        # 2.9 does not have revisions so archive anyway
+        if p.toolkit.check_ckan_version(min_version='2.9.0'):
+            return True
+
         # check to see if resources are added, deleted or URL changed
 
         # look for the latest revision
@@ -81,7 +89,7 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
 
         # get the package as it was at that previous revision
         context = {'model': model, 'session': model.Session,
-                   #'user': c.user or c.author,
+                   # 'user': c.user or c.author,
                    'ignore_auth': True,
                    'revision_id': previous_revision.id}
         data_dict = {'id': package.id}
@@ -130,6 +138,13 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
                               key, res.id[:4], res.position,
                               old_res_value, new_res_value)
                     return True
+
+            was_in_progress = old_resources[res.id].get('upload_in_progress', None)
+            is_in_progress = res.extras.get('upload_in_progress', None)
+            if was_in_progress != is_in_progress:
+                log.debug('Resource %s upload finished - will archive. ', 'upload_finished')
+                return True
+
             log.debug('Resource unchanged. pos=%s id=%s',
                       res.position, res.id[:4])
 
@@ -169,12 +184,16 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
 
     def get_helpers(self):
         return dict((name, function) for name, function
-                    in helpers.__dict__.items()
+                    in list(helpers.__dict__.items())
                     if callable(function) and name[0] != '_')
 
     # IPackageController
 
     def after_show(self, context, pkg_dict):
+        """ Old CKAN function name """
+        return self.after_dataset_show(context, pkg_dict)
+
+    def after_dataset_show(self, context, pkg_dict):
         # Insert the archival info into the package_dict so that it is
         # available on the API.
         # When you edit the dataset, these values will not show in the form,
@@ -184,9 +203,11 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
         archivals = Archival.get_for_package(pkg_dict['id'])
         if not archivals:
             return
+
         # dataset
         dataset_archival = aggregate_archivals_for_a_dataset(archivals)
         pkg_dict['archiver'] = dataset_archival
+
         # resources
         archivals_by_res_id = dict((a.resource_id, a) for a in archivals)
         for res in pkg_dict['resources']:
@@ -197,6 +218,18 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
                 del archival_dict['package_id']
                 del archival_dict['resource_id']
                 res['archiver'] = archival_dict
+
+    def before_dataset_index(self, pkg_dict):
+        '''
+        remove `archiver` from index
+        '''
+        pkg_dict.pop('archiver', None)
+        return pkg_dict
+
+    # IClick
+
+    def get_commands(self):
+        return cli.get_commands()
 
 
 class TestIPipePlugin(p.SingletonPlugin):
