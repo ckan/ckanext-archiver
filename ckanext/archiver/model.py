@@ -80,6 +80,12 @@ broken_enum = {True: 'Broken',
                False: 'Downloaded OK'}
 
 
+def _get_status_by_id(status_id):
+    if status_id is None:
+        return None
+    return Status.by_id(status_id)
+
+
 class Archival(Base):
     """
     Details of the archival of resources. Has the filepath for successfully
@@ -151,9 +157,7 @@ class Archival(Base):
 
     @property
     def status(self):
-        if self.status_id is None:
-            return None
-        return Status.by_id(self.status_id)
+        return _get_status_by_id(self.status_id)
 
     def as_dict(self):
         context = {'model': model}
@@ -186,7 +190,7 @@ def aggregate_archivals_for_a_dataset(archivals):
             archival_dict['reason'] = archival.reason
 
     if archivals:
-        archival_dict['status'] = Status.by_id(archival_dict['status_id'])
+        archival_dict['status'] = _get_status_by_id(archival_dict['status_id'])
         archival_dict['is_broken'] = \
             Status.is_status_broken(archival_dict['status_id'])
     return archival_dict
