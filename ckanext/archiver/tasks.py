@@ -711,7 +711,7 @@ def save_archival(resource, status_id, reason, url_redirected_to,
 
     May propagate a CkanError.
     '''
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow()
 
     archival = Archival.get_for_resource(resource['id'])
     first_archival = not archival
