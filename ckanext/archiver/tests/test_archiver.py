@@ -348,7 +348,6 @@ class TestDownload:
         }
 
     def _test_resource(self, url, format=None):
-        context = {'model': model, 'ignore_auth': True, 'session': model.Session, 'user': 'test'}
         pkg = {'name': 'testpkg', 'resources': [
             {'url': url, 'format': format or 'TXT', 'description': 'Test'}
         ]}

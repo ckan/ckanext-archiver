@@ -244,6 +244,7 @@ Config settings
       * ``ckanext-archiver.max_content_length`` = the maximum size (in bytes) of files to archive (default ``50000000`` =50MB)
       * ``ckanext-archiver.user_agent_string`` = identifies the archiver to servers it archives from
       * ``ckanext-archiver.verify_https`` = true/false whether you want to verify https connections and therefore fail if it is specified in the URL but does not verify.
+      * ``ckan.download_proxy`` = URL to a HTTP/S proxy server that will be used to download resources.
 
 4.  Nightly report generation
 
