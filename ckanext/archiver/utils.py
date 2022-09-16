@@ -9,9 +9,7 @@ from sqlalchemy import func
 import sys
 from time import sleep
 
-import ckan.plugins as p
-from ckan.plugins.toolkit import config
-
+from ckan.plugins.toolkit import check_ckan_version, config
 try:
     from collections import OrderedDict  # from python 2.7
 except ImportError:
@@ -106,7 +104,7 @@ def _get_packages_and_resources_in_args(identifiers, queue):
 
     log.info('Queue: %s', queue)
     for package in packages:
-        if p.toolkit.check_ckan_version(max_version='2.2.99'):
+        if check_ckan_version(max_version='2.2.99'):
             # earlier CKANs had ResourceGroup
             pkg_resources = \
                 [resource for resource in
@@ -122,7 +120,7 @@ def _get_packages_and_resources_in_args(identifiers, queue):
         yield package, True, len(pkg_resources), None
 
     for resource in resources:
-        if p.toolkit.check_ckan_version(max_version='2.2.99'):
+        if check_ckan_version(max_version='2.2.99'):
             package = resource.resource_group.package
         else:
             package = resource.package
@@ -377,7 +375,7 @@ def migrate_archiver_dirs():
         # check the package isn't deleted
         # Need to refresh the resource's session
         resource = model.Session.query(model.Resource).get(resource.id)
-        if p.toolkit.check_ckan_version(max_version='2.2.99'):
+        if check_ckan_version(max_version='2.2.99'):
             package = None
             if resource.resource_group:
                 package = resource.resource_group.package

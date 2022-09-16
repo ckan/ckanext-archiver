@@ -1,9 +1,11 @@
+# encoding: utf-8
+
 from __future__ import print_function
+import json
 import logging
 import os
 import shutil
 import tempfile
-import json
 
 from future.moves.urllib.parse import quote_plus
 from ckan.plugins.toolkit import config

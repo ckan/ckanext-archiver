@@ -39,7 +39,7 @@ ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 USER_AGENT = 'ckanext-archiver'
 
 # CKAN 2.7 introduces new jobs system
-if p.toolkit.check_ckan_version(max_version='2.6.99'):
+if toolkit.check_ckan_version(max_version='2.6.99'):
     from ckan.lib.celery_app import celery
 
     @celery.task(name="archiver.update_resource")
