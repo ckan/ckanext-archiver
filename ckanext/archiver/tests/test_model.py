@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 from builtins import object
 import ckanext.archiver.model as archiver_model
 from ckan.tests import factories as ckan_factories

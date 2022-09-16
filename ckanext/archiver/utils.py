@@ -1,12 +1,13 @@
+# encoding: utf-8
+
 import itertools
 import logging
-import sys
-from time import sleep
-
 import os
 import re
 import shutil
 from sqlalchemy import func
+import sys
+from time import sleep
 
 import ckan.plugins as p
 from ckan.plugins.toolkit import config
@@ -15,7 +16,6 @@ try:
     from collections import OrderedDict  # from python 2.7
 except ImportError:
     from sqlalchemy.util import OrderedDict
-
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +26,8 @@ def update(identifiers, queue):
             _get_packages_and_resources_in_args(identifiers, queue):
         if is_pkg:
             package = pkg_or_res
-            log.info('Queuing dataset %s (%s resources) Q:%s', package.name, num_resources_for_pkg, queue)
+            log.info('Queuing dataset %s (%s resources) Q:%s',
+                     package.name, num_resources_for_pkg, queue)
             lib.create_archiver_package_task(package, queue)
             sleep(0.1)  # to try to avoid Redis getting overloaded
         else:
@@ -38,7 +39,7 @@ def update(identifiers, queue):
 
 
 def _get_packages_and_resources_in_args(identifiers, queue):
-    '''Given identifies that specify one or more datasets or
+    '''Given identifiers that specify one or more datasets or
     resources, it generates a list of those packages & resources with some
     basic properties.
 
@@ -109,10 +110,10 @@ def _get_packages_and_resources_in_args(identifiers, queue):
             # earlier CKANs had ResourceGroup
             pkg_resources = \
                 [resource for resource in
-                 itertools.chain.from_iterable(
-                     (rg.resources_all
-                      for rg in package.resource_groups_all)
-                 )
+                    itertools.chain.from_iterable(
+                        (rg.resources_all
+                         for rg in package.resource_groups_all)
+                    )
                  if res.state == 'active']
         else:
             pkg_resources = \
@@ -330,8 +331,7 @@ def migrate():
         "last_modified": "ALTER TABLE archival ADD COLUMN last_modified character varying"
     })
 
-    MIGRATIONS_MODIFY = OrderedDict({
-    })
+    MIGRATIONS_MODIFY = OrderedDict({})
 
     q = "select column_name from INFORMATION_SCHEMA.COLUMNS where table_name = 'archival';"
     current_cols = list([m[0] for m in model.Session.execute(q)])
@@ -431,13 +431,13 @@ def size_report():
     from ckan import model
     from ckanext.archiver.model import Archival
     kb = 1024
-    mb = 1024*1024
+    mb = 1024 * 1024
     gb = pow(1024, 3)
     size_bins = [
-        (kb, '<1 KB'), (10*kb, '1-10 KB'), (100*kb, '10-100 KB'),
-        (mb, '100 KB - 1 MB'), (10*mb, '1-10 MB'), (100*mb, '10-100 MB'),
-        (gb, '100 MB - 1 GB'), (10*gb, '1-10 GB'), (100*gb, '10-100 GB'),
-        (gb*gb, '>100 GB'),
+        (kb, '<1 KB'), (10 * kb, '1-10 KB'), (100 * kb, '10-100 KB'),
+        (mb, '100 KB - 1 MB'), (10 * mb, '1-10 MB'), (100 * mb, '10-100 MB'),
+        (gb, '100 MB - 1 GB'), (10 * gb, '1-10 GB'), (100 * gb, '10-100 GB'),
+        (gb * gb, '>100 GB'),
     ]
     previous_bin = (0, '')
     counts = []

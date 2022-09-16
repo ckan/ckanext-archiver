@@ -14,7 +14,7 @@ for package in packages:
         package_stats.increment('deleted')
     else:
         package_stats.increment('not deleted')
-print package_stats.report()
+print(package_stats.report())
 > deleted: 30
 > not deleted: 70
 
@@ -26,7 +26,7 @@ for package in packages:
         package_stats.add('deleted', package.name)
     else:
         package_stats.add('not deleted' package.name)
-print package_stats.report()
+print(package_stats.report())
 > deleted: 30 pollution-uk, flood-regions, river-quality, ...
 > not deleted: 70 spending-bristol, ...
 
@@ -65,7 +65,7 @@ class StatsCount(dict):
         lines = []
         indent_str = '\t' * indent
         report_dict = dict()
-        for category in list(self.keys()):
+        for category in self.keys():
             report_dict[category] = self.report_value(category)
 
         if order_by_title:

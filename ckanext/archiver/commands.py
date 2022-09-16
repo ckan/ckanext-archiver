@@ -1,13 +1,12 @@
+# encoding: utf-8
+
 from __future__ import print_function
 import logging
 import sys
 
 from ckan.lib.cli import CkanCommand
 
-from ckanext.archiver import utils
-
-
-REQUESTS_HEADER = {'content-type': 'application/json'}
+from . import utils
 
 
 class Archiver(CkanCommand):
@@ -27,7 +26,7 @@ class Archiver(CkanCommand):
              package or group, if specified
 
         paster archiver update-test [{package-name/id}|{group-name/id}]
-           - Does an archive in the current process i.e. avoiding Celery queue
+           - Does an archive in the current process i.e. avoiding worker queue
              so that you can test on the command-line more easily.
 
         paster archiver clean-status

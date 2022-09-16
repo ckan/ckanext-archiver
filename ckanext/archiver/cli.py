@@ -1,5 +1,7 @@
+# encoding: utf-8
+
 import click
-from ckanext.archiver import utils
+from . import utils
 
 
 def get_commands():

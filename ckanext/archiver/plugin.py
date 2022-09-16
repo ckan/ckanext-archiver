@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 import logging
 
 from ckan import model
@@ -39,9 +41,7 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
 
         log.debug('Notified of package event: %s %s', entity.name, operation)
 
-        run_archiver = \
-            self._is_it_sufficient_change_to_run_archiver(entity, operation)
-        if not run_archiver:
+        if not self._is_it_sufficient_change_to_run_archiver(entity, operation):
             return
 
         log.debug('Creating archiver task: %s', entity.name)
@@ -170,7 +170,7 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
         return {
             'archiver_resource_show': action.archiver_resource_show,
             'archiver_dataset_show': action.archiver_dataset_show,
-            }
+        }
 
     # IAuthFunctions
 
@@ -178,13 +178,13 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
         return {
             'archiver_resource_show': auth.archiver_resource_show,
             'archiver_dataset_show': auth.archiver_dataset_show,
-            }
+        }
 
     # ITemplateHelpers
 
     def get_helpers(self):
         return dict((name, function) for name, function
-                    in list(helpers.__dict__.items())
+                    in helpers.__dict__.items()
                     if callable(function) and name[0] != '_')
 
     # IPackageController

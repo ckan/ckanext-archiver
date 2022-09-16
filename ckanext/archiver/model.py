@@ -1,8 +1,8 @@
-import itertools
+# encoding: utf-8
+
 from builtins import str
-from builtins import object
-import uuid
 from datetime import datetime
+import uuid
 
 from sqlalchemy import Column, MetaData
 from sqlalchemy import types
@@ -27,29 +27,23 @@ metadata = MetaData()
 # enum of all the archival statuses (singleton)
 # NB Be very careful changing these status strings. They are also used in
 # ckanext-qa tasks.py.
-class Status(object):
+class Status:
     _instance = None
 
     def __init__(self):
-        not_broken = {
+        self._by_id = {
             # is_broken = False
             0: 'Archived successfully',
             1: 'Content has not changed',
-        }
-        broken = {
             # is_broken = True
             10: 'URL invalid',
             11: 'URL request failed',
             12: 'Download error',
-        }
-        not_sure = {
             # is_broken = None i.e. not sure
             21: 'Chose not to download',
             22: 'Download failure',
             23: 'System error during archival',
         }
-        self._by_id = dict(itertools.chain(not_broken.items(), broken.items()))
-        self._by_id.update(not_sure)
         self._by_text = dict((value, key)
                              for key, value in self._by_id.items())
 

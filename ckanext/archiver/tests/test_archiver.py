@@ -68,7 +68,7 @@ class TestLinkChecker:
 
     def test_non_escaped_url(self, client):
         url = client + '/+/http://www.homeoffice.gov.uk/publications/science-research-statistics/research-statistics/' \
-              + 'drugs-alcohol-research/hosb1310/hosb1310-ann2tabs?view=Binary'
+            + 'drugs-alcohol-research/hosb1310/hosb1310-ann2tabs?view=Binary'
         context = json.dumps({})
         data = json.dumps({'url': url})
         res = link_checker(context, data)
@@ -156,7 +156,7 @@ class TestArchiver:
     def _test_package(self, url, format=None):
         pkg = {'resources': [
             {'url': url, 'format': format or 'TXT', 'description': 'Test'}
-            ]}
+        ]}
         pkg = ckan_factories.Dataset(**pkg)
         return pkg
 
@@ -336,7 +336,6 @@ class TestDownload:
     @pytest.fixture(autouse=True)
     @pytest.mark.usefixtures(u"clean_index")
     def initialData(cls, clean_db):
-        config
         cls.fake_context = {
             'site_url': config.get('ckan.site_url_internally') or config['ckan.site_url'],
             'cache_url_root': config.get('ckanext-archiver.cache_url_root'),
@@ -346,7 +345,7 @@ class TestDownload:
         context = {'model': model, 'ignore_auth': True, 'session': model.Session, 'user': 'test'}
         pkg = {'name': 'testpkg', 'resources': [
             {'url': url, 'format': format or 'TXT', 'description': 'Test'}
-            ]}
+        ]}
         pkg = get_action('package_create')(context, pkg)
         return pkg['resources'][0]
 
