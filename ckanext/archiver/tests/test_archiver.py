@@ -13,7 +13,6 @@ import pytest
 
 from ckan import model
 from ckan import plugins
-from ckan.logic import get_action
 from ckan.tests import factories as ckan_factories
 
 from ckanext.archiver import model as archiver_model
@@ -187,7 +186,7 @@ class TestArchiver:
     def test_resource_hash_and_content_length(self, client):
         url = client + '/?status=200&content=test&content-type=csv'
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(res_id))
+        result = self._get_update_resource_json(res_id)
         assert result['size'] == len('test')
         from hashlib import sha1
         assert result['hash'] == sha1('test'.encode('utf-8')).hexdigest(), result
@@ -196,7 +195,7 @@ class TestArchiver:
     def test_archived_file(self, client):
         url = client + '/?status=200&content=test&content-type=csv'
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(res_id))
+        result = self._get_update_resource_json(res_id)
 
         assert result['cache_filepath']
         assert os.path.exists(result['cache_filepath'])
@@ -211,14 +210,14 @@ class TestArchiver:
     def test_update_url_with_unknown_content_type(self, client):
         url = client + '/?content-type=application/foo&content=test'
         res_id = self._test_resource(url, format='foo')['id']  # format has no effect
-        result = json.loads(update_resource(res_id))
+        result = self._get_update_resource_json(res_id)
         assert result, result
         assert result['mimetype'] == 'application/foo'  # stored from the header
 
     def test_wms_1_3(self, client):
         url = client + '/WMS_1_3/'
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(res_id))
+        result = self._get_update_resource_json(res_id)
         assert result, result
         assert result['request_type'] == 'WMS 1.3'
 
@@ -268,7 +267,7 @@ class TestArchiver:
     def test_content_length_not_integer(self, client):
         url = client + '/?status=200&content=content&length=abc&content-type=csv'
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(res_id))
+        result = self._get_update_resource_json(res_id)
         assert result, result
 
     def test_content_length_repeated(self, client):
@@ -276,7 +275,7 @@ class TestArchiver:
         # listing the Content-Length header twice causes requests to
         # store the value as a comma-separated list
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(res_id))
+        result = self._get_update_resource_json(res_id)
         assert result, result
 
     def test_url_with_30x_follows_and_records_redirect(self, client):
@@ -284,7 +283,7 @@ class TestArchiver:
         redirect_url = url + u'?status=200&content=test&content-type=text/csv'
         url += u'?status=301&location=%s' % quote_plus(redirect_url)
         res_id = self._test_resource(url)['id']
-        result = json.loads(update_resource(res_id))
+        result = self._get_update_resource_json(res_id)
         assert result
         assert result['url_redirected_to'] == redirect_url
 
@@ -329,6 +328,11 @@ class TestArchiver:
         assert params.get('package_id') == pkg['id']
         assert params.get('resource_id') is None
 
+    def _get_update_resource_json(self, id):
+        result = update_resource(resource_id=id)
+        assert result, "update_resource returned: {}".format(result)
+        return json.loads(result)
+
 
 class TestDownload:
     '''Tests of the download method (and things it calls).
@@ -348,7 +352,7 @@ class TestDownload:
         pkg = {'name': 'testpkg', 'resources': [
             {'url': url, 'format': format or 'TXT', 'description': 'Test'}
         ]}
-        pkg = get_action('package_create')(context, pkg)
+        pkg = ckan_factories.Dataset(**pkg)
         return pkg['resources'][0]
 
     def test_head_unsupported(self, client):
