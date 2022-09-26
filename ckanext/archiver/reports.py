@@ -175,10 +175,15 @@ def broken_links_for_organization(organization, include_sub_organizations=False)
         elif er.startswith("DATA4NR"):
             via = "Data4nr"
 
-        archived_resource = model.Session.query(model.ResourceRevision)\
-                                 .filter_by(id=resource.id)\
-                                 .filter_by(revision_timestamp=archival.resource_timestamp)\
-                                 .first() or resource
+        # CKAN 2.9 does not have revisions
+        if p.toolkit.check_ckan_version(max_version="2.8.99"):
+            archived_resource = model.Session.query(model.ResourceRevision)\
+                                    .filter_by(id=resource.id)\
+                                    .filter_by(revision_timestamp=archival.resource_timestamp)\
+                                    .first() or resource
+        else:
+            archived_resource = resource
+
         row_data = OrderedDict((
             ('dataset_title', pkg.title),
             ('dataset_name', pkg.name),
