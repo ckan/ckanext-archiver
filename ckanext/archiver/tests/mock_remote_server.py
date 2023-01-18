@@ -9,10 +9,15 @@ from contextlib import contextmanager
 from threading import Thread
 from time import sleep
 from wsgiref.simple_server import make_server
-from future.moves.urllib.request import urlopen
 import socket
 import os
+import sys
 from functools import reduce
+
+if sys.version_info.major < 3:
+    from future.moves.urllib.request import urlopen
+else:
+    from urllib.request import urlopen
 
 
 class MockHTTPServer(object):
