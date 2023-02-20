@@ -54,7 +54,7 @@
    <tbody>
       {% for row_dict in c.data['table'] %}
         <tr>
-          <td><a href="{{ h.url_for(controller='package', action='read', id=row_dict['dataset_name']) }}">{{ row_dict['dataset_title'] }}</a></td>
+          <td><a href="{{ h.url_for('dataset.read', id=row_dict['dataset_name']) }}">{{ row_dict['dataset_title'] }}</a></td>
           {% if c.options['include_sub_organizations'] %}
             <td><a href="/publisher/{{ row_dict['organization_name'] }}">{{ row_dict['organization_title'] }}</a></td>
           {% endif %}
