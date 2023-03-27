@@ -4,11 +4,15 @@ import os
 import shutil
 import tempfile
 import json
-
-from future.moves.urllib.parse import quote_plus
-from ckan.plugins.toolkit import config
+import sys
 import pytest
 
+if sys.version_info.major < 3:
+    from future.moves.urllib.parse import quote_plus
+else:
+    from urllib.parse import quote_plus
+
+from ckan.plugins.toolkit import config
 from ckan import model
 from ckan import plugins
 from ckan.logic import get_action

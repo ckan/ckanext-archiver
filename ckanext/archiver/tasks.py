@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from builtins import str
 import os
+import sys
 import hashlib
 import http.client
 import requests
@@ -14,7 +15,11 @@ import re
 from time import sleep
 
 from requests.packages import urllib3
-from future.moves.urllib.parse import urlparse, urljoin, quote, urlunparse
+
+if sys.version_info.major < 3:
+    from future.moves.urllib.parse import urlparse, urljoin, quote, urlunparse
+else:
+    from urllib.parse import urlparse, urljoin, quote, urlunparse
 
 from ckan.common import _
 from ckan.lib import uploader

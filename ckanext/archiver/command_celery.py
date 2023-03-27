@@ -1,5 +1,4 @@
 from __future__ import print_function
-from future import standard_library
 import sys
 import os
 
@@ -9,7 +8,9 @@ from celery import Celery
 
 from ckan.lib.cli import CkanCommand
 
-standard_library.install_aliases()  # noqa
+if sys.version_info.major < 3:
+    from future import standard_library
+    standard_library.install_aliases()  # noqa
 
 
 class CeleryCmd(CkanCommand):
