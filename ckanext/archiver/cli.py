@@ -12,7 +12,7 @@ def archiver():
 
 
 @archiver.command()
-@click.option('-q', '--queue')
+@click.option('-q', '--queue', default='bulk')
 @click.argument('identifiers', nargs=-1)
 def update(identifiers, queue):
     utils.update(identifiers, queue)
