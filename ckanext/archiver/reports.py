@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 import copy
 try:
     from collections import OrderedDict  # from python 2.7
@@ -97,7 +99,7 @@ def broken_links_index(include_sub_organizations=False):
             ('broken_package_percent', lib.percent(org_counts['broken_packages'], org_counts['packages'])),
             ('broken_resource_count', org_counts['broken_resources']),
             ('broken_resource_percent', lib.percent(org_counts['broken_resources'], org_counts['resources'])),
-            )))
+        )))
         # Totals - always use the counts, rather than counts_with_sub_orgs, to
         # avoid counting a package in both its org and parent org
         org_counts_ = counts[org_name]
@@ -202,7 +204,7 @@ def broken_links_for_organization(organization, include_sub_organizations=False)
             ('reason', archival.reason),
             ('status', archival.status),
             ('failure_count', archival.failure_count),
-            ))
+        ))
 
         results.append(row_data)
 
@@ -251,7 +253,7 @@ broken_links_report_info = {
     'option_combinations': broken_links_option_combinations,
     'generate': broken_links,
     'template': 'report/broken_links.html',
-    }
+}
 
 
 def add_progress_bar(iterable, caption=None):

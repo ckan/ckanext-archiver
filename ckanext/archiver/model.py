@@ -1,8 +1,8 @@
-import itertools
+# encoding: utf-8
+
 from builtins import str
-from builtins import object
-import uuid
 from datetime import datetime
+import uuid
 
 from sqlalchemy import Column, MetaData
 from sqlalchemy import types
@@ -27,29 +27,23 @@ metadata = MetaData()
 # enum of all the archival statuses (singleton)
 # NB Be very careful changing these status strings. They are also used in
 # ckanext-qa tasks.py.
-class Status(object):
+class Status:
     _instance = None
 
     def __init__(self):
-        not_broken = {
+        self._by_id = {
             # is_broken = False
             0: 'Archived successfully',
             1: 'Content has not changed',
-        }
-        broken = {
             # is_broken = True
             10: 'URL invalid',
             11: 'URL request failed',
             12: 'Download error',
-        }
-        not_sure = {
             # is_broken = None i.e. not sure
             21: 'Chose not to download',
             22: 'Download failure',
             23: 'System error during archival',
         }
-        self._by_id = dict(itertools.chain(not_broken.items(), broken.items()))
-        self._by_id.update(not_sure)
         self._by_text = dict((value, key)
                              for key, value in self._by_id.items())
 
@@ -86,6 +80,12 @@ broken_enum = {True: 'Broken',
                False: 'Downloaded OK'}
 
 
+def _get_status_by_id(status_id):
+    if status_id is None:
+        return None
+    return Status.by_id(status_id)
+
+
 class Archival(Base):
     """
     Details of the archival of resources. Has the filepath for successfully
@@ -118,7 +118,7 @@ class Archival(Base):
     last_success = Column(types.DateTime)
     failure_count = Column(types.Integer, default=0)
 
-    created = Column(types.DateTime, default=datetime.now)
+    created = Column(types.DateTime, default=datetime.utcnow)
     updated = Column(types.DateTime)
 
     def __repr__(self):
@@ -157,9 +157,7 @@ class Archival(Base):
 
     @property
     def status(self):
-        if self.status_id is None:
-            return None
-        return Status.by_id(self.status_id)
+        return _get_status_by_id(self.status_id)
 
     def as_dict(self):
         context = {'model': model}
@@ -192,7 +190,7 @@ def aggregate_archivals_for_a_dataset(archivals):
             archival_dict['reason'] = archival.reason
 
     if archivals:
-        archival_dict['status'] = Status.by_id(archival_dict['status_id'])
+        archival_dict['status'] = _get_status_by_id(archival_dict['status_id'])
         archival_dict['is_broken'] = \
             Status.is_status_broken(archival_dict['status_id'])
     return archival_dict

@@ -95,7 +95,7 @@ def migrate(options):
         archival = Archival.get_for_resource(res.id)
         if archival:
             changed = None
-            for field, value in list(fields.items()):
+            for field, value in fields.items():
                 if getattr(archival, field) != value:
                     if options.write:
                         setattr(archival, field, value)
@@ -107,7 +107,7 @@ def migrate(options):
         else:
             archival = Archival.create(res.id)
             if options.write:
-                for field, value in list(fields.items()):
+                for field, value in fields.items():
                     setattr(archival, field, value)
                 model.Session.add(archival)
             add_stat('Added to archival table', res, stats)
