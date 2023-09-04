@@ -650,16 +650,6 @@ def tidy_url(url):
     It may raise LinkInvalidError if the URL has a problem.
     '''
 
-    # Find out if it has unicode characters, and if it does, quote them
-    # so we are left with an ascii string
-    try:
-        url = url.decode('ascii')
-    except Exception:
-        parts = list(urlparse(url))
-        parts[2] = quote(parts[2].encode('utf-8'))
-        url = urlunparse(parts)
-    url = str(url)
-
     # strip whitespace from url
     # (browsers appear to do this)
     url = url.strip()
