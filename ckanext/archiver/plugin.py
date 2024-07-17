@@ -238,6 +238,7 @@ class TestIPipePlugin(p.SingletonPlugin):
     p.implements(IPipe, inherit=True)
 
     def __init__(self, *args, **kwargs):
+        super().__init__()
         self.calls = []
 
     def reset(self):
