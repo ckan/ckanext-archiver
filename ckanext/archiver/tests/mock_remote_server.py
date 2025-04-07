@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from threading import Thread
 from time import sleep
 from wsgiref.simple_server import make_server
-from future.moves.urllib.request import urlopen
+from urllib.request import urlopen
 import socket
 import os
 from functools import reduce

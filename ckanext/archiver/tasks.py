@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from builtins import str
 import os
 import hashlib
@@ -14,7 +13,7 @@ import re
 from time import sleep
 
 from requests.packages import urllib3
-from future.moves.urllib.parse import urlparse, urljoin, quote, urlunparse
+from urllib.parse import urlparse, urljoin, quote, urlunparse
 
 from ckan.common import _
 from ckan.lib import uploader

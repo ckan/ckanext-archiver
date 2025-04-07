@@ -1,11 +1,10 @@
-from __future__ import print_function
 import logging
 import os
 import shutil
 import tempfile
 import json
 
-from future.moves.urllib.parse import quote_plus
+from urllib.parse import quote_plus
 from ckan.plugins.toolkit import config
 import pytest
 
