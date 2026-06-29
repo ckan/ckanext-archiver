@@ -1,7 +1,6 @@
 import logging
 import os
 import shutil
-import tempfile
 import json
 
 from urllib.parse import quote_plus
@@ -13,7 +12,6 @@ from ckan import plugins
 from ckan.logic import get_action
 from ckan.tests import factories as ckan_factories
 
-from ckanext.archiver import model as archiver_model
 from ckanext.archiver.model import Archival
 
 
