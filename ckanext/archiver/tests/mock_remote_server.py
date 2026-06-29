@@ -2,9 +2,6 @@
 An HTTP server that listens on localhost and returns a variety of responses for
 mocking remote servers.
 """
-from builtins import str
-from builtins import range
-from builtins import object
 from contextlib import contextmanager
 from threading import Thread
 from time import sleep

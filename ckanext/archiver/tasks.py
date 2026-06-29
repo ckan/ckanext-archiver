@@ -1,4 +1,3 @@
-from builtins import str
 import os
 import hashlib
 import http.client
@@ -29,26 +28,6 @@ toolkit = p.toolkit
 ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
-
-# CKAN 2.7 introduces new jobs system
-if p.toolkit.check_ckan_version(max_version='2.6.99'):
-    from ckan.lib.celery_app import celery
-
-    @celery.task(name="archiver.update_resource")
-    def update_resouce_celery(*args, **kwargs):
-        update_resource(*args, **kwargs)
-
-    @celery.task(name="archiver.update_package")
-    def update_package_celery(*args, **kwargs):
-        update_package(*args, **kwargs)
-
-    @celery.task(name="archiver.clean")
-    def clean_celery(*args, **kwargs):
-        clean(*args, **kwargs)
-
-    @celery.task(name="archiver.link_checker")
-    def link_checker_celery(*args, **kwargs):
-        link_checker(*args, **kwargs)
 
 
 class ArchiverError(Exception):

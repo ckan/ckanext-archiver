@@ -32,9 +32,6 @@ def get_resources(state='active', publisher_ref=None, resource_id=None,
     from ckan import model
     resources = model.Session.query(model.Resource) \
         .filter_by(state=state)
-    if p.toolkit.check_ckan_version(max_version='2.2.99'):
-        # earlier CKANs had ResourceGroup
-        resources = resources.join(model.ResourceGroup)
     resources = resources \
         .join(model.Package) \
         .filter_by(state='active')

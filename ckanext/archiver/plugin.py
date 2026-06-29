@@ -28,8 +28,7 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
     p.implements(p.ITemplateHelpers)
     p.implements(p.IPackageController, inherit=True)
 
-    if p.toolkit.check_ckan_version(min_version='2.9.0'):
-        p.implements(p.IClick)
+    p.implements(p.IClick)
 
     # IDomainObjectModification
 
@@ -64,92 +63,7 @@ class ArchiverPlugin(p.SingletonPlugin, p.toolkit.DefaultDatasetForm):
             return False
         # therefore operation=changed
 
-        # 2.9 does not have revisions so archive anyway
-        if p.toolkit.check_ckan_version(min_version='2.9.0'):
-            return True
-
-        # check to see if resources are added, deleted or URL changed
-
-        # look for the latest revision
-        rev_list = package.all_related_revisions
-        if not rev_list:
-            log.debug('No sign of previous revisions - will archive')
-            return True
-        # I am not confident we can rely on the info about the current
-        # revision, because we are still in the 'before_commit' stage. So
-        # simply ignore that if it's returned.
-        if rev_list[0][0].id == model.Session.revision.id:
-            rev_list = rev_list[1:]
-        if not rev_list:
-            log.warn('No sign of previous revisions - will archive')
-            return True
-        previous_revision = rev_list[0][0]
-        log.debug('Comparing with revision: %s %s',
-                  previous_revision.timestamp, previous_revision.id)
-
-        # get the package as it was at that previous revision
-        context = {'model': model, 'session': model.Session,
-                   # 'user': c.user or c.author,
-                   'ignore_auth': True,
-                   'revision_id': previous_revision.id}
-        data_dict = {'id': package.id}
-        try:
-            old_pkg_dict = p.toolkit.get_action('package_show')(
-                context, data_dict)
-        except p.toolkit.NotFound:
-            log.warn('No sign of previous package - will archive anyway')
-            return True
-
-        # has the licence changed?
-        old_licence = (old_pkg_dict['license_id'],
-                       lib.get_extra_from_pkg_dict(old_pkg_dict, 'licence')
-                       or None)
-        new_licence = (package.license_id,
-                       package.extras.get('licence') or None)
-        if old_licence != new_licence:
-            log.debug('Licence has changed - will archive: %r->%r',
-                      old_licence, new_licence)
-            return True
-
-        # have any resources been added or deleted?
-        old_resources = dict((res['id'], res)
-                             for res in old_pkg_dict['resources'])
-        old_res_ids = set(old_resources.keys())
-        new_res_ids = set((res.id for res in package.resources))
-        deleted_res_ids = old_res_ids - new_res_ids
-        if deleted_res_ids:
-            log.debug('Deleted resources - will archive. res_ids=%r',
-                      deleted_res_ids)
-            return True
-        added_res_ids = new_res_ids - old_res_ids
-        if added_res_ids:
-            log.debug('Added resources - will archive. res_ids=%r',
-                      added_res_ids)
-            return True
-
-        # have any resources' url/format changed?
-        for res in package.resources:
-            for key in ('url', 'format'):
-                old_res_value = old_resources[res.id][key]
-                new_res_value = getattr(res, key)
-                if old_res_value != new_res_value:
-                    log.debug('Resource %s changed - will archive. '
-                              'id=%s pos=%s url="%s"->"%s"',
-                              key, res.id[:4], res.position,
-                              old_res_value, new_res_value)
-                    return True
-
-            was_in_progress = old_resources[res.id].get('upload_in_progress', None)
-            is_in_progress = res.extras.get('upload_in_progress', None)
-            if was_in_progress != is_in_progress:
-                log.debug('Resource %s upload finished - will archive. ', 'upload_finished')
-                return True
-
-            log.debug('Resource unchanged. pos=%s id=%s',
-                      res.position, res.id[:4])
-
-        log.debug('No new, deleted or changed resources - won\'t archive')
-        return False
+        return True
 
     # IReport
 

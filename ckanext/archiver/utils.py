@@ -105,26 +105,13 @@ def _get_packages_and_resources_in_args(identifiers, queue):
 
     log.info('Queue: %s', queue)
     for package in packages:
-        if p.toolkit.check_ckan_version(max_version='2.2.99'):
-            # earlier CKANs had ResourceGroup
-            pkg_resources = \
-                [resource for resource in
-                 itertools.chain.from_iterable(
-                     (rg.resources_all
-                      for rg in package.resource_groups_all)
-                 )
-                 if res.state == 'active']
-        else:
-            pkg_resources = \
+        pkg_resources = \
                 [resource for resource in package.resources_all
                  if resource.state == 'active']
         yield package, True, len(pkg_resources), None
 
     for resource in resources:
-        if p.toolkit.check_ckan_version(max_version='2.2.99'):
-            package = resource.resource_group.package
-        else:
-            package = resource.package
+        package = resource.package
         yield resource, False, None, package
 
 
@@ -377,12 +364,7 @@ def migrate_archiver_dirs():
         # check the package isn't deleted
         # Need to refresh the resource's session
         resource = model.Session.query(model.Resource).get(resource.id)
-        if p.toolkit.check_ckan_version(max_version='2.2.99'):
-            package = None
-            if resource.resource_group:
-                package = resource.resource_group.package
-        else:
-            package = resource.package
+        package = resource.package
 
         if package and package.state == model.State.DELETED:
             print('Package is deleted')
