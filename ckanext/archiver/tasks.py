@@ -11,7 +11,7 @@ import copy
 import mimetypes
 import re
 from time import sleep
-
+from ckan.lib.search import rebuild
 from requests.packages import urllib3
 from urllib.parse import urlparse, urljoin, quote, urlunparse
 
@@ -187,14 +187,8 @@ def _update_search_index(package_id, log):
     '''
     Tells CKAN to update its search index for a given package.
     '''
-    from ckan import model
-    from ckan.lib.search.index import PackageSearchIndex
-    package_index = PackageSearchIndex()
-    context_ = {'model': model, 'ignore_auth': True, 'session': model.Session,
-                'use_cache': False, 'validate': False}
-    package = toolkit.get_action('package_show')(context_, {'id': package_id})
-    package_index.index_package(package, defer_commit=False)
-    log.info('Search indexed %s', package['name'])
+    rebuild(package_id)
+    log.info('Search indexed %s', package_id)
 
 
 def _update_resource(resource_id, queue, log):
