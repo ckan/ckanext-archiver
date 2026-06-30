@@ -1,4 +1,3 @@
-import itertools
 import logging
 import sys
 from time import sleep
@@ -8,7 +7,6 @@ import re
 import shutil
 from sqlalchemy import func
 
-import ckan.plugins as p
 from ckan.plugins.toolkit import config
 
 try:

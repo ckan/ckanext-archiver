@@ -1,5 +1,4 @@
 import logging
-import ckan.plugins as p
 import ckan.plugins.toolkit as tk
 from ckanext.archiver.tasks import update_package, update_resource
 
