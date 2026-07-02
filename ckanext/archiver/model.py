@@ -1,6 +1,4 @@
 import itertools
-from builtins import str
-from builtins import object
 import uuid
 from datetime import datetime
 

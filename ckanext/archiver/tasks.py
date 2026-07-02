@@ -1,4 +1,3 @@
-from builtins import str
 import os
 import hashlib
 import http.client
@@ -11,7 +10,7 @@ import copy
 import mimetypes
 import re
 from time import sleep
-
+from ckan.lib.search import rebuild
 from requests.packages import urllib3
 from urllib.parse import urlparse, urljoin, quote, urlunparse
 
@@ -29,26 +28,6 @@ toolkit = p.toolkit
 ALLOWED_SCHEMES = set(('http', 'https', 'ftp'))
 
 USER_AGENT = 'ckanext-archiver'
-
-# CKAN 2.7 introduces new jobs system
-if p.toolkit.check_ckan_version(max_version='2.6.99'):
-    from ckan.lib.celery_app import celery
-
-    @celery.task(name="archiver.update_resource")
-    def update_resouce_celery(*args, **kwargs):
-        update_resource(*args, **kwargs)
-
-    @celery.task(name="archiver.update_package")
-    def update_package_celery(*args, **kwargs):
-        update_package(*args, **kwargs)
-
-    @celery.task(name="archiver.clean")
-    def clean_celery(*args, **kwargs):
-        clean(*args, **kwargs)
-
-    @celery.task(name="archiver.link_checker")
-    def link_checker_celery(*args, **kwargs):
-        link_checker(*args, **kwargs)
 
 
 class ArchiverError(Exception):
@@ -187,14 +166,8 @@ def _update_search_index(package_id, log):
     '''
     Tells CKAN to update its search index for a given package.
     '''
-    from ckan import model
-    from ckan.lib.search.index import PackageSearchIndex
-    package_index = PackageSearchIndex()
-    context_ = {'model': model, 'ignore_auth': True, 'session': model.Session,
-                'use_cache': False, 'validate': False}
-    package = toolkit.get_action('package_show')(context_, {'id': package_id})
-    package_index.index_package(package, defer_commit=False)
-    log.info('Search indexed %s', package['name'])
+    rebuild(package_id)
+    log.info('Search indexed %s', package_id)
 
 
 def _update_resource(resource_id, queue, log):
@@ -673,7 +646,7 @@ def tidy_url(url):
 
     # Check we aren't using any schemes we shouldn't be.
     # Scheme is case-insensitive.
-    if not parsed_url.scheme or not parsed_url.scheme.lower() in ALLOWED_SCHEMES:
+    if not parsed_url.scheme or parsed_url.scheme.lower() not in ALLOWED_SCHEMES:
         raise LinkInvalidError(_('Invalid url scheme. Please use one of: %s') %
                                ' '.join(ALLOWED_SCHEMES))
 

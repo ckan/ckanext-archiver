@@ -46,8 +46,6 @@ def broken_links_index(include_sub_organizations=False):
         num_resources = model.Session.query(model.Package)\
             .filter_by(owner_org=org.id)\
             .filter_by(state='active')
-        if p.toolkit.check_ckan_version(max_version='2.2.99'):
-            num_resources = num_resources.join(model.ResourceGroup)
         num_resources = num_resources \
             .join(model.Resource)\
             .filter_by(state='active')\
@@ -175,14 +173,7 @@ def broken_links_for_organization(organization, include_sub_organizations=False)
         elif er.startswith("DATA4NR"):
             via = "Data4nr"
 
-        # CKAN 2.9 does not have revisions
-        if p.toolkit.check_ckan_version(max_version="2.8.99"):
-            archived_resource = model.Session.query(model.ResourceRevision)\
-                                    .filter_by(id=resource.id)\
-                                    .filter_by(revision_timestamp=archival.resource_timestamp)\
-                                    .first() or resource
-        else:
-            archived_resource = resource
+        archived_resource = resource
 
         row_data = OrderedDict((
             ('dataset_title', pkg.title),
@@ -216,8 +207,6 @@ def broken_links_for_organization(organization, include_sub_organizations=False)
                         .count()
     num_resources = model.Session.query(model.Resource)\
                          .filter_by(state='active')
-    if p.toolkit.check_ckan_version(max_version='2.2.99'):
-        num_resources = num_resources.join(model.ResourceGroup)
     num_resources = num_resources \
         .join(model.Package)\
         .filter(model.Package.owner_org.in_(org_ids))\
