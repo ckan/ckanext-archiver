@@ -22,7 +22,7 @@ Demo:
 .. image:: archiver_report.png
     :alt: Broken link report
 
-Compatibility: Requires CKAN version 2.1 or later
+Compatibility: Requires CKAN version 2.6 or later
 
 TODO:
 
